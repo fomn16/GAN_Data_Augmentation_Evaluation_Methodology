@@ -76,6 +76,10 @@ class Classifier_MNIST:
 
         self.create()
         classLossHist = []
+        print("Fold " + str(self.currentFold) + ": Starting Classifier training on " + trainName + "\n")
+        infoFile = open(self.basePath + '/info.txt', 'a')
+        infoFile.write("Fold " + str(self.currentFold) + ": Starting Classifier training on " + trainName)
+        infoFile.close()
 
         '''seq = iaa.Sequential([
             #iaa.Crop(px=(0, 5)),
@@ -103,7 +107,7 @@ class Classifier_MNIST:
                     infoFile.write("Epoch " + str(epoch) + "\nclassifier loss: " + str(classLoss) + '\n')
                     infoFile.close()
 
-                    plotLoss([[classLossHist, 'classifier loss']], self.basePath + '/trainPlot.png')
+                    plotLoss([[classLossHist, 'classifier loss']], self.basePath + '/trainPlot_f' + str(self.currentFold) + '_' + trainName + '.png')
 
             if(epoch % 5 == 0 or epoch == self.nEpochs * extraEpochs - 1):
                 self.classifier.save(verifiedFolder(self.basePath + '/modelSaves/' + trainName + '/fold_' + str(self.currentFold) + '/epoch_' + str(epoch)))

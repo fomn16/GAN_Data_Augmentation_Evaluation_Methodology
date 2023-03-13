@@ -2,6 +2,8 @@
 from Modules.Shared.helper import *
 from Modules.Augmentation.GAN_MNIST import GAN_MNIST
 from Modules.Augmentation.CGAN_MNIST import CGAN_MNIST
+from Modules.Augmentation.DATASET_DIRECTLY import DATASET_DIRECTLY
+from Modules.Augmentation.MIXED import MIXED
 from Modules.Shared.Params import Params
 from Modules.Benchmark.Classifier_MNIST import Classifier_MNIST
 
@@ -40,8 +42,10 @@ for f in range(params.kFold):
     trainLbls = np.concatenate((trainLbls, lbls[(params.currentFold + 1)*n:]))
 
     generators = []
-    generators.append(GAN_MNIST(params))
+    generators.append(DATASET_DIRECTLY(params, testImgs, testLbls))
     generators.append(CGAN_MNIST(params))
+    generators.append(MIXED(params, generators, {0,1}))
+    generators.append(GAN_MNIST(params))
 
     #cria classificador
     classifier = Classifier_MNIST(params)
@@ -55,7 +59,7 @@ for f in range(params.kFold):
         generator.saveGenerationExample()
 
         #faz testes
-        genImgs, genLbls = generator.generate(trainImgs.shape[0]*10)
+        genImgs, genLbls = generator.generate(trainImgs.shape[0])
         classifier.train(genImgs, genLbls, generator.name)
         classifier.runTest(testImgs, testLbls)
 

@@ -44,11 +44,12 @@ for f in range(params.kFold):
     generators = []
     generators.append(DATASET_DIRECTLY(params, testImgs, testLbls))
     generators.append(CGAN_MNIST(params))
-    generators.append(MIXED(params, generators, {0,1}))
     generators.append(GAN_MNIST(params))
+    generators.append(MIXED(params, generators, {0,1}))
 
-    #cria classificador
-    classifier = Classifier_MNIST(params)
+    #cria testes
+    classifiers = []
+    classifiers.append(Classifier_MNIST(params))
 
     for generator in generators:
         #treinando gan
@@ -58,10 +59,13 @@ for f in range(params.kFold):
         #salva resultado final
         generator.saveGenerationExample()
 
-        #faz testes
+        #gera dados para testes
         genImgs, genLbls = generator.generate(trainImgs.shape[0])
-        classifier.train(genImgs, genLbls, generator.name)
-        classifier.runTest(testImgs, testLbls)
+
+        #percorre os testes
+        for classifier in classifiers:
+            classifier.train(genImgs, genLbls, generator.name)
+            classifier.runTest(testImgs, testLbls)
 
 
 '''

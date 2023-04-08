@@ -71,9 +71,11 @@ class Classifier_MNIST:
         infoFile.write(report)
         infoFile.close()
 
-    def train(self, imgs, lbls, trainName, extraEpochs = 1):
+    def train(self, generator, nGenData, extraEpochs = 1):
         ''', aug = False):'''
-
+        imgs, lbls = generator.generate(nGenData)
+        trainName = generator.name
+        
         self.create()
         classLossHist = []
         print("Fold " + str(self.currentFold) + ": Starting Classifier training on " + trainName + "\n")

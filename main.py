@@ -6,6 +6,7 @@ from Modules.Augmentation.DATASET_DIRECTLY import DATASET_DIRECTLY
 from Modules.Augmentation.MIXED import MIXED
 from Modules.Shared.Params import Params
 from Modules.Benchmark.Classifier_MNIST import Classifier_MNIST
+from Modules.Benchmark.TSNE_MNIST import TSNE_MNIST
 
 #carrega dataset
 datasetName = 'mnist'
@@ -48,8 +49,9 @@ for f in range(params.kFold):
     generators.append(MIXED(params, generators, {0,1}))
 
     #cria testes
-    classifiers = []
-    classifiers.append(Classifier_MNIST(params))
+    testers = []
+    testers.append(TSNE_MNIST(dataset, params))
+    testers.append(Classifier_MNIST(params))
 
     for generator in generators:
         #treinando gan
@@ -59,13 +61,10 @@ for f in range(params.kFold):
         #salva resultado final
         generator.saveGenerationExample()
 
-        #gera dados para testes
-        genImgs, genLbls = generator.generate(trainImgs.shape[0])
-
         #percorre os testes
-        for classifier in classifiers:
-            classifier.train(genImgs, genLbls, generator.name)
-            classifier.runTest(testImgs, testLbls)
+        for tester in testers:
+            tester.train(generator, trainImgs.shape[0])
+            tester.runTest(testImgs, testLbls)
 
 
 '''

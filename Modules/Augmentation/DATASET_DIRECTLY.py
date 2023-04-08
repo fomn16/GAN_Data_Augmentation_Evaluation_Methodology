@@ -29,5 +29,8 @@ class DATASET_DIRECTLY:
         out = ((images * 127.5) + 127.5).astype('uint8')
         showOutputAsImg(out, self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a.argmax()) for a in labels]) + '.png',nEntries)
 
-    def generate(self, nEntries):
-        return self.imgs, self.lbls
+    def generate(self, nEntries=None):
+        if(nEntries == None):
+            return self.imgs, self.lbls
+        else:
+            return self.imgs[:nEntries], self.lbls[:nEntries]

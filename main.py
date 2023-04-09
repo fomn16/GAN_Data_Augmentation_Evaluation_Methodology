@@ -1,5 +1,6 @@
 #Z:\felip\Documents\UNB\TCC\modulos
 from Modules.Shared.helper import *
+from Modules.Datasets.MNIST import MNIST
 from Modules.Augmentation.GAN_MNIST import GAN_MNIST
 from Modules.Augmentation.CGAN_MNIST import CGAN_MNIST
 from Modules.Augmentation.DATASET_DIRECTLY import DATASET_DIRECTLY
@@ -9,62 +10,44 @@ from Modules.Benchmark.Classifier_MNIST import Classifier_MNIST
 from Modules.Benchmark.TSNE_MNIST import TSNE_MNIST
 
 #carrega dataset
-datasetName = 'mnist'
-dataset, info = tfds.load(name = datasetName, with_info=True, as_supervised=True, data_dir='./tfDatasets')
-
 params = Params()
-params.nClasses = 10
-
-params.imgChannels = 1
-params.imgWidth = 28
-params.imgHeight = 28
-
+#local no qual os datasets serão salvos
+params.dataDir = './tfDatasets'
 #validação cruzada
 params.kFold = 5
-params.currentFold = 4
+params.currentFold = 0
 
-#preparando dados
-imgs1, lbls1 = loadIntoArray(dataset['train'], params.nClasses)
-imgs2, lbls2 = loadIntoArray(dataset['test'], params.nClasses)
-imgs = np.concatenate((imgs1, imgs2))
-lbls = np.concatenate((lbls1, lbls2))
+datasets = []
+datasets.append(MNIST(params))
 
-totalEntries = imgs.shape[0]
+for dataset in datasets:
+    for fold in range(params.kFold):
+        params.currentFold = fold
+        dataset.loadParams()
 
-n = int(np.floor(totalEntries/params.kFold))
+        generators = []
+        generators.append(DATASET_DIRECTLY(params))
+        generators.append(CGAN_MNIST(params))
+        generators.append(GAN_MNIST(params))
+        generators.append(MIXED(params, generators, {0,1}))
 
-for f in range(params.kFold):
-    params.currentFold = f
-    trainImgs = imgs[:params.currentFold*n]
-    trainLbls = lbls[:params.currentFold*n]
-    testImgs = imgs[params.currentFold*n:(params.currentFold + 1)*n]
-    testLbls = lbls[params.currentFold*n:(params.currentFold + 1)*n]
-    trainImgs = np.concatenate((trainImgs, imgs[(params.currentFold + 1)*n:]))
-    trainLbls = np.concatenate((trainLbls, lbls[(params.currentFold + 1)*n:]))
+        #cria testes
+        testers = []
+        testers.append(TSNE_MNIST(dataset, params))
+        testers.append(Classifier_MNIST(params))
 
-    generators = []
-    generators.append(DATASET_DIRECTLY(params, testImgs, testLbls))
-    generators.append(CGAN_MNIST(params))
-    generators.append(GAN_MNIST(params))
-    generators.append(MIXED(params, generators, {0,1}))
+        for generator in generators:
+            #treinando gan
+            generator.compile()
+            generator.train(dataset.getTrainData())
 
-    #cria testes
-    testers = []
-    testers.append(TSNE_MNIST(dataset, params))
-    testers.append(Classifier_MNIST(params))
+            #salva resultado final
+            generator.saveGenerationExample()
 
-    for generator in generators:
-        #treinando gan
-        generator.compile()
-        generator.train(trainImgs, trainLbls)
-
-        #salva resultado final
-        generator.saveGenerationExample()
-
-        #percorre os testes
-        for tester in testers:
-            tester.train(generator, trainImgs.shape[0])
-            tester.runTest(testImgs, testLbls)
+            #percorre os testes
+            for tester in testers:
+                tester.train(generator, dataset.getNTrain())
+                tester.runTest(dataset.getTestData())
 
 
 '''

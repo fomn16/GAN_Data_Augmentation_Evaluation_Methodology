@@ -1,7 +1,6 @@
 #imports de todas as bibliotecas utilizadas:
 from tensorflow.keras.models import Sequential, Model, load_model
 from tensorflow.keras.layers import Dense, BatchNormalization, Reshape, Conv2DTranspose, Conv2D, LeakyReLU, Flatten
-
 from tensorflow.keras.optimizers import Adam
 from sklearn.utils import shuffle
 from sklearn.metrics import classification_report, roc_auc_score
@@ -9,21 +8,19 @@ import pandas as pd
 import numpy as np
 import IPython.display
 import PIL.Image
-
 from tensorflow import keras
 from tensorflow.keras import layers
-
 from keras.layers import Input
-
 import matplotlib.pyplot as plt
-
 import random
-
 import tensorflow_datasets as tfds
-
 from imgaug import augmenters as iaa
-
 import os
+import itertools
+
+import sys
+sys.path.insert(1, '../../')
+from Modules.Shared.DatasetIteratorInfo import DatasetIteratorInfo
 
 
 #Funções helper para apresentação de imagens e dados de treinamento
@@ -68,3 +65,39 @@ def loadIntoArray(dataset, nClasses):
     imgs = (imgs.astype("float") - 127.5) / 127.5
     lbls = np.array(lbls)
     return imgs, lbls
+
+#fazendo uso de lazy loading do dataset
+def loadIntoArrayLL(datasetSection, dataset, nClasses, start, end, iterators:DatasetIteratorInfo):
+    if(datasetSection == 'test'):
+        if(start >= iterators.lastTestId):
+            iterators.testIter = itertools.islice(iterators.testIter, start - iterators.lastTestId, None)
+        else:
+            iterators.testIter = itertools.islice(dataset['test'].as_numpy_iterator(), start, None)
+        iterators.lastTestId = end + 1
+        imgs = []
+        lbls = []
+        for i in range(end - start):
+            d = next(iterators.testIter)
+            imgs.append(d['image'])
+            lbls.append([int(d['label'] == n) for n in range(nClasses)])
+        imgs = np.array(imgs).astype("float")
+        imgs = (imgs - 127.5) / 127.5
+        lbls = np.array(lbls)
+        return imgs, lbls
+    else:
+        if(start >= iterators.lastTrainId):
+            iterators.trainIter = itertools.islice(iterators.trainIter, start - iterators.lastTrainId, None)
+        else:
+            iterators.trainIter = itertools.islice(dataset['train'].as_numpy_iterator(), start, None)
+        iterators.lastTrainId = end
+        #rsdz = map(resizeImg, npI)
+        imgs = []
+        lbls = []
+        for i in range(end - start):
+            d = next(iterators.trainIter)
+            imgs.append(d['image'])
+            lbls.append([int(d['label'] == n) for n in range(nClasses)])
+        imgs = np.array(imgs).astype("float")
+        imgs = (imgs - 127.5) / 127.5
+        lbls = np.array(lbls)
+        return imgs, lbls

@@ -116,7 +116,8 @@ class GAN_MNIST:
         )
 
     #treinamento GAN
-    def train(self, imgs, lbls):
+    def train(self, data):
+        imgs, lbls = data
         benchNoise = np.random.uniform(-1,1, size=(256,self.noiseDim))
         genLossHist = []
         discLossHist = []

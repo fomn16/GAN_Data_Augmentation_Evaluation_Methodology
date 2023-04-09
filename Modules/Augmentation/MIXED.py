@@ -18,7 +18,7 @@ class MIXED:
         pass
 
     #treinamento
-    def train(self, imgs, lbls):
+    def train(self, data):
         pass
 
     #Gera e salva imagens

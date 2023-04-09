@@ -119,7 +119,8 @@ class CGAN_MNIST:
         )
 
     #treinamento GAN
-    def train(self, imgs, lbls):
+    def train(self, data):
+        imgs, lbls = data
         discLossHist = []
         genLossHist = []
 

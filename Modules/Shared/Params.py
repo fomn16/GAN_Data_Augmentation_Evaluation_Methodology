@@ -9,3 +9,5 @@ class Params:
     imgChannels = None
     imgWidth = None
     imgHeight = None
+    dataDir = None
+    datasetName = None

@@ -4,23 +4,20 @@ from Modules.Shared.helper import *
 from Modules.Shared.Params import Params
 
 class DATASET_DIRECTLY:
-    def __init__(self, params, imgs, lbls, nameComplement = ""):
+    def __init__(self, params, nameComplement = ""):
         self.name = self.__class__.__name__ + nameComplement
 
         self.currentFold = params.currentFold
         self.nClasses = params.nClasses
         self.basePath = verifiedFolder('runtime/trainingStats/' + self.name)
 
-        self.imgs = imgs
-        self.lbls = lbls
-
     #compilando discriminador e gan
     def compile(self):
         pass
 
     #treinamento
-    def train(self, imgs, lbls):
-        pass
+    def train(self, data):
+        self.imgs, self.lbls = data
 
     #Gera e salva imagens
     def saveGenerationExample(self, nEntries = 20):

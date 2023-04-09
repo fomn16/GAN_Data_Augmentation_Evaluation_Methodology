@@ -61,7 +61,8 @@ class Classifier_MNIST:
     def create(self):
         self.classifier = load_model(self.basePath + "/modelSaves/init/fold_" + str(self.currentFold))
 
-    def runTest(self, imgs, lbls):
+    def runTest(self, data):
+        imgs, lbls = data
         classOutput = self.classifier.predict(imgs, verbose=0)
         classOutput = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in classOutput]
         report = classification_report(lbls, classOutput) + '\nauroc score: ' + str(roc_auc_score(lbls, classOutput)) + '\n'

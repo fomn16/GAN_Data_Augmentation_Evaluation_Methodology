@@ -19,44 +19,25 @@ class TSNE_MNIST:
     #carrega dataset
     inceptionBatchSize = 250
 
-    def _loadIntoArray(self, dataset):
-        npI = dataset.as_numpy_iterator()
-        imgs = []
-        lbls = []
-        for d in npI:
-            imgs.append(d[0])
-            lbls.append(d[1])
-        imgs = np.array(imgs)
-        imgs = (imgs.astype("float") - 127.5) / 127.5
-        lbls = np.array(lbls)
-        return imgs, lbls
-
     def __init__(self, dataset, params: Params, nameComplement = ""):
         self.name = self.__class__.__name__ + nameComplement
 
         self.nClasses = params.nClasses
-        self.basePath = verifiedFolder('runtime/trainingStats/' + self.name + '/fold_' + params.currentFold)
+        self.basePath = verifiedFolder('runtime/trainingStats/' + self.name + '/fold_' + str(params.currentFold))
         self.currentFold = params.currentFold
 
         self.imgChannels = params.imgChannels
         self.imgWidth = params.imgWidth
         self.imgHeight = params.imgHeight
-        
 
         self.inceptionModel = InceptionV3(input_shape = (self.enlargedWidth, self.enlargedHeight, 3), include_top = False)
 
         #organizando imagens e labels para treinamento do tsne
-        imgs1, lbls1 = self._loadIntoArray(dataset['train'])
-        imgs2, lbls2 = self._loadIntoArray(dataset['test'])
-
-        imgs = np.concatenate((imgs1, imgs2))
-        lbls = np.concatenate((lbls1, lbls2))
-
+        imgs,lbls = dataset.getAllData()
         totalEntries = imgs.shape[0]
         n = int(np.floor(totalEntries/5))
-
         self.testImgs = imgs[:n]
-        self.testLbls = lbls[:n]
+        self.testLbls = [np.argmax(lbl) for lbl in lbls[:n]]
         self.nEntries = self.testImgs.shape[0]
 
     def train(self, generator, nGenData, extraEpochs = 1):
@@ -108,9 +89,9 @@ class TSNE_MNIST:
                 labels =  np.concatenate((labels, genLbls))
             del out
             #del genLbls
-            print("Batch " + str(i) + "/" + str(math.ceil(self.nEntries/self.inceptionBatchSize))+'\n')
+            print("Generating inception descriptors, batch " + str(i) + "/" + str(math.ceil(self.nEntries/self.inceptionBatchSize))+'\n')
             infoFile = open(self.basePath + '/info.txt', 'a')
-            infoFile.write("Batch " + str(i) + "/" + str(math.ceil(self.nEntries/self.inceptionBatchSize))+'\n')
+            infoFile.write("Generating inception descriptors, batch " + str(i) + "/" + str(math.ceil(self.nEntries/self.inceptionBatchSize))+'\n')
             infoFile.close()
         #del testImgs
         #del testLbls
@@ -153,5 +134,5 @@ class TSNE_MNIST:
 
             plt.clf()
 
-    def runTest(self, imgs, lbls):
+    def runTest(self, data):
         pass

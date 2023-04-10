@@ -1,10 +1,9 @@
 #Z:\felip\Documents\UNB\TCC\modulos
 from Modules.Shared.helper import *
 from Modules.Datasets.MNIST import MNIST
+from Modules.Datasets.CIFAR_10 import CIFAR_10
+from Modules.Datasets.Dataset import Dataset
 from Modules.Shared.Params import Params
-from Modules.Benchmark.Classifier_MNIST import Classifier_MNIST
-from Modules.Benchmark.TSNE_MNIST import TSNE_MNIST
-from Modules.Augmentation.AugImplSelector import getAugmentator
 from Modules.Shared.config import *
 
 import os
@@ -18,7 +17,8 @@ params.dataDir = './tfDatasets'
 params.kFold = 5
 params.currentFold = 0
 
-datasets = []
+datasets : List[Dataset] = []
+datasets.append(CIFAR_10(params))
 datasets.append(MNIST(params))
 
 for dataset in datasets:
@@ -26,29 +26,31 @@ for dataset in datasets:
         params.currentFold = fold
         dataset.loadParams()
 
-        generators = []
-        generators.append(getAugmentator(Augmentators.CGAN, params))
-        generators.append(getAugmentator(Augmentators.DIRECT, params))
-        generators.append(getAugmentator(Augmentators.GAN, params))
-        generators.append(getAugmentator(Augmentators.MIXED, params, generators, {0,1}))
+        augmentators = []
+        augmentators.append(getAugmentator(Augmentators.CGAN, params))
+        augmentators.append(getAugmentator(Augmentators.DIRECT, params))
+        augmentators.append(getAugmentator(Augmentators.GAN, params))
+        augmentators.append(getAugmentator(Augmentators.MIXED, params, augmentators, {0,1}))
 
         #cria testes
-        testers = []
-        testers.append(Classifier_MNIST(params))
-        testers.append(TSNE_MNIST(params))
+        benchmarks = []
+        benchmarks.append(getBenchmark(Benchmarks.CLASSIFIER, params))
+        benchmarks.append(getBenchmark(Benchmarks.TSNE_INCEPTION, params))
 
-        for generator in generators:
-            #treinando gan
-            generator.compile()
-            generator.train(dataset)
+        for augmentator in augmentators:
+            if(augmentator != None):
+                #treinando gan
+                augmentator.compile()
+                augmentator.train(dataset)
 
-            #salva resultado final
-            generator.saveGenerationExample()
+                #salva resultado final
+                augmentator.saveGenerationExample()
 
-            #percorre os testes
-            for tester in testers:
-                tester.train(generator, dataset)
-                tester.runTest(dataset.getAllTestData())
+                #percorre os testes
+                for benchmark in benchmarks:
+                    if(benchmark != None):
+                        benchmark.train(augmentator, dataset)
+                        benchmark.runTest(dataset.getAllTestData())
 
 
 '''

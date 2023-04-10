@@ -8,12 +8,8 @@ from Modules.Shared.Params import Params
 from tensorflow.keras.applications.inception_v3 import InceptionV3
 from sklearn.manifold import TSNE
 
-class TSNE_MNIST:
-    noiseDim = 100
+class TSNE_INCEPTION:
     nClasses = 10
-    imgWidth = 28
-    imgHeight = 28
-
     enlargedWidth = 84
     enlargedHeight = 84
     #carrega dataset
@@ -24,22 +20,9 @@ class TSNE_MNIST:
 
         self.nClasses = params.nClasses
         self.basePath = verifiedFolder('runtime/trainingStats/' + self.name + '/fold_' + str(params.currentFold))
-        self.currentFold = params.currentFold
-
-        self.imgChannels = params.imgChannels
-        self.imgWidth = params.imgWidth
-        self.imgHeight = params.imgHeight
 
         self.inceptionModel = InceptionV3(input_shape = (self.enlargedWidth, self.enlargedHeight, 3), include_top = False)
         self.params = params
-
-        '''#organizando imagens e labels para treinamento do tsne
-        imgs,lbls = dataset.getAllData()
-        totalEntries = imgs.shape[0]
-        n = int(np.floor(totalEntries/5))
-        self.testImgs = imgs[:n]
-        self.testLbls = [np.argmax(lbl) for lbl in lbls[:n]]
-        self.nEntries = self.testImgs.shape[0]'''
 
     def train(self, generator, dataset, extraEpochs = 1):
         p = None
@@ -63,7 +46,7 @@ class TSNE_MNIST:
 
             genImgs, genLbls = generator.generate(self.inceptionBatchSize)
                 
-            genLbls = [np.argmax(lbl) + 10 for lbl in genLbls]
+            genLbls = [np.argmax(lbl) + self.nClasses for lbl in genLbls]
 
             for img in genImgs:
                 retyped = ((img * 127.5) + 127.5).astype('uint8')
@@ -78,7 +61,8 @@ class TSNE_MNIST:
             #del genImgs
 
             resizedImgs = np.array(resizedImgs)
-            resizedImgs = np.concatenate((resizedImgs,)*3, axis=-1)
+            if(self.params.imgChannels == 1):
+                resizedImgs = np.concatenate((resizedImgs,)*3, axis=-1)
     
             out = self.inceptionModel.predict(resizedImgs)
             del resizedImgs
@@ -121,7 +105,7 @@ class TSNE_MNIST:
             tstZ = []
             tstLbl = []
             for i in range(len(labels)):
-                if(labels[i]%10 == j):
+                if(labels[i]%self.nClasses == j):
                     tstZ.append(z[i])
                     tstLbl.append(labels[i])
             tstZ = np.array(tstZ)

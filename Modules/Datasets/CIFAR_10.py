@@ -4,13 +4,13 @@ from Modules.Shared.helper import *
 from Modules.Shared.Params import Params
 from Modules.Datasets.Dataset import Dataset
 
-class MNIST(Dataset):
+class CIFAR_10(Dataset):
     def __init__(self, params:Params):
         self.params = params
         self.loadParams()
 
         self.name = params.datasetName
-        self.dataset, self.info = tfds.load(name = params.datasetName, with_info=True, as_supervised=True, data_dir=params.dataDir)
+        self.dataset, self.info = tfds.load(name = params.datasetName, with_info=True, data_dir=params.dataDir)
 
         self.trainInstances = self.info.splits['train'].num_examples
         self.testInstances = self.info.splits['test'].num_examples
@@ -18,11 +18,11 @@ class MNIST(Dataset):
         self.n_instances_fold = int(np.floor(self.totalInstances/self.params.kFold))
     
     def loadParams(self):
-        self.params.datasetName = 'mnist'
+        self.params.datasetName = 'cifar10'
         self.params.nClasses = 10
-        self.params.imgChannels = 1
-        self.params.imgWidth = 28
-        self.params.imgHeight = 28
+        self.params.imgChannels = 3
+        self.params.imgWidth = 32
+        self.params.imgHeight = 32
     
     def getTrainData(self, start, end):
         return self._getFromDatasetLL(start, end)
@@ -44,12 +44,12 @@ class MNIST(Dataset):
         imgs = None
         lbls = None
         if(end < self.trainInstances):
-            imgs, lbls = loadIntoArrayLL('train', self.dataset, self.params.nClasses, start, end, 0, 1)
+            imgs, lbls = loadIntoArrayLL('train', self.dataset, self.params.nClasses, start, end, 'image', 'label')
         elif (start >= self.trainInstances):
-            imgs, lbls = loadIntoArrayLL('test', self.dataset, self.params.nClasses, start - self.trainInstances, end - self.trainInstances, 0, 1)
+            imgs, lbls = loadIntoArrayLL('test', self.dataset, self.params.nClasses, start - self.trainInstances, end - self.trainInstances, 'image', 'label')
         else:
-            imgs1, lbls1 = loadIntoArrayLL('train', self.dataset, self.params.nClasses, start, self.trainInstances - 1, 0, 1)
-            imgs2, lbls2 = loadIntoArrayLL('test', self.dataset, self.params.nClasses, 0, end - self.trainInstances, 0, 1)
+            imgs1, lbls1 = loadIntoArrayLL('train', self.dataset, self.params.nClasses, start, self.trainInstances - 1, 'image', 'label')
+            imgs2, lbls2 = loadIntoArrayLL('test', self.dataset, self.params.nClasses, 0, end - self.trainInstances, 'image', 'label')
             imgs = np.concatenate((imgs1, imgs2))
             lbls = np.concatenate((lbls1, lbls2))
             del imgs1, imgs2, lbls1, lbls2

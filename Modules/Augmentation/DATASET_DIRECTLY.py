@@ -4,8 +4,8 @@ from Modules.Shared.helper import *
 from Modules.Shared.Params import Params
 
 class DATASET_DIRECTLY:
-    def __init__(self, params, nameComplement = ""):
-        self.name = self.__class__.__name__ + nameComplement
+    def __init__(self, params:Params, nameComplement = ""):
+        self.name = self.__class__.__name__ + "_" + params.datasetName + "_" + nameComplement
 
         self.currentFold = params.currentFold
         self.nClasses = params.nClasses

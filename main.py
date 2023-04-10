@@ -1,13 +1,11 @@
 #Z:\felip\Documents\UNB\TCC\modulos
 from Modules.Shared.helper import *
 from Modules.Datasets.MNIST import MNIST
-from Modules.Augmentation.GAN_MNIST import GAN_MNIST
-from Modules.Augmentation.CGAN_MNIST import CGAN_MNIST
-from Modules.Augmentation.DATASET_DIRECTLY import DATASET_DIRECTLY
-from Modules.Augmentation.MIXED import MIXED
 from Modules.Shared.Params import Params
 from Modules.Benchmark.Classifier_MNIST import Classifier_MNIST
 from Modules.Benchmark.TSNE_MNIST import TSNE_MNIST
+from Modules.Augmentation.AugImplSelector import getAugmentator
+from Modules.Shared.config import *
 
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
@@ -29,10 +27,10 @@ for dataset in datasets:
         dataset.loadParams()
 
         generators = []
-        generators.append(CGAN_MNIST(params))
-        generators.append(DATASET_DIRECTLY(params))
-        generators.append(GAN_MNIST(params))
-        generators.append(MIXED(params, generators, {0,1}))
+        generators.append(getAugmentator(Augmentators.CGAN, params))
+        generators.append(getAugmentator(Augmentators.DIRECT, params))
+        generators.append(getAugmentator(Augmentators.GAN, params))
+        generators.append(getAugmentator(Augmentators.MIXED, params, generators, {0,1}))
 
         #cria testes
         testers = []

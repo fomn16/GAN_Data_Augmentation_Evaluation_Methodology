@@ -19,7 +19,7 @@ class TSNE_MNIST:
     #carrega dataset
     inceptionBatchSize = 250
 
-    def __init__(self, dataset, params: Params, nameComplement = ""):
+    def __init__(self, params: Params, nameComplement = ""):
         self.name = self.__class__.__name__ + nameComplement
 
         self.nClasses = params.nClasses
@@ -31,21 +31,26 @@ class TSNE_MNIST:
         self.imgHeight = params.imgHeight
 
         self.inceptionModel = InceptionV3(input_shape = (self.enlargedWidth, self.enlargedHeight, 3), include_top = False)
+        self.params = params
 
-        #organizando imagens e labels para treinamento do tsne
+        '''#organizando imagens e labels para treinamento do tsne
         imgs,lbls = dataset.getAllData()
         totalEntries = imgs.shape[0]
         n = int(np.floor(totalEntries/5))
         self.testImgs = imgs[:n]
         self.testLbls = [np.argmax(lbl) for lbl in lbls[:n]]
-        self.nEntries = self.testImgs.shape[0]
+        self.nEntries = self.testImgs.shape[0]'''
 
-    def train(self, generator, nGenData, extraEpochs = 1):
+    def train(self, generator, dataset, extraEpochs = 1):
         p = None
         labels = None
-        for i in range(math.floor(self.nEntries/self.inceptionBatchSize)):
+        nEntries = int(np.floor(dataset.totalInstances/self.params.kFold))
+        for i in range(math.floor(nEntries/self.inceptionBatchSize)):
             resizedImgs = []
-            for img in self.testImgs[self.inceptionBatchSize*i : min(self.inceptionBatchSize*(i+1), self.nEntries)]:
+            testImgs, testLbls = dataset.getTrainData(self.inceptionBatchSize*i, min(self.inceptionBatchSize*(i+1), nEntries))
+            testLbls = [np.argmax(lbl) for lbl in testLbls]
+            
+            for img in testImgs:
                 retyped = ((img * 127.5) + 127.5).astype('uint8')
                 resized = cv2.resize(retyped, dsize=(self.enlargedWidth, self.enlargedHeight), interpolation=cv2.INTER_CUBIC)
                 del retyped
@@ -81,20 +86,20 @@ class TSNE_MNIST:
             out = np.reshape(out,(out.shape[0], out.shape[-1]))
             if(i == 0):
                 p = out
-                labels = self.testLbls[self.inceptionBatchSize*i : min(self.inceptionBatchSize*(i+1), self.nEntries)]
+                labels = testLbls
                 labels =  np.concatenate((labels, genLbls))
             else:
                 p = np.concatenate((p, out))
-                labels =  np.concatenate((labels, self.testLbls[self.inceptionBatchSize*i : min(self.inceptionBatchSize*(i+1), self.nEntries)]))
+                labels =  np.concatenate((labels, testLbls))
                 labels =  np.concatenate((labels, genLbls))
             del out
             #del genLbls
-            print("Generating inception descriptors, batch " + str(i) + "/" + str(math.ceil(self.nEntries/self.inceptionBatchSize))+'\n')
+            print("Generating inception descriptors, batch " + str(i) + "/" + str(math.ceil(nEntries/self.inceptionBatchSize))+'\n')
             infoFile = open(self.basePath + '/info.txt', 'a')
-            infoFile.write("Generating inception descriptors, batch " + str(i) + "/" + str(math.ceil(self.nEntries/self.inceptionBatchSize))+'\n')
+            infoFile.write("Generating inception descriptors, batch " + str(i) + "/" + str(math.ceil(nEntries/self.inceptionBatchSize))+'\n')
             infoFile.close()
-        #del testImgs
-        #del testLbls
+        del testImgs
+        del testLbls
 
         tsne = TSNE(n_components=2, verbose=1, random_state=1602)
         z = tsne.fit_transform(p)

@@ -22,7 +22,6 @@ import sys
 sys.path.insert(1, '../../')
 from Modules.Shared.DatasetIteratorInfo import DatasetIteratorInfo
 
-
 #Funções helper para apresentação de imagens e dados de treinamento
 
 def concatArray(a, n):
@@ -67,37 +66,17 @@ def loadIntoArray(dataset, nClasses):
     return imgs, lbls
 
 #fazendo uso de lazy loading do dataset
-def loadIntoArrayLL(datasetSection, dataset, nClasses, start, end, iterators:DatasetIteratorInfo):
-    if(datasetSection == 'test'):
-        if(start >= iterators.lastTestId):
-            iterators.testIter = itertools.islice(iterators.testIter, start - iterators.lastTestId, None)
-        else:
-            iterators.testIter = itertools.islice(dataset['test'].as_numpy_iterator(), start, None)
-        iterators.lastTestId = end + 1
-        imgs = []
-        lbls = []
-        for i in range(end - start):
-            d = next(iterators.testIter)
-            imgs.append(d['image'])
-            lbls.append([int(d['label'] == n) for n in range(nClasses)])
-        imgs = np.array(imgs).astype("float")
-        imgs = (imgs - 127.5) / 127.5
-        lbls = np.array(lbls)
-        return imgs, lbls
-    else:
-        if(start >= iterators.lastTrainId):
-            iterators.trainIter = itertools.islice(iterators.trainIter, start - iterators.lastTrainId, None)
-        else:
-            iterators.trainIter = itertools.islice(dataset['train'].as_numpy_iterator(), start, None)
-        iterators.lastTrainId = end
-        #rsdz = map(resizeImg, npI)
-        imgs = []
-        lbls = []
-        for i in range(end - start):
-            d = next(iterators.trainIter)
-            imgs.append(d['image'])
-            lbls.append([int(d['label'] == n) for n in range(nClasses)])
-        imgs = np.array(imgs).astype("float")
-        imgs = (imgs - 127.5) / 127.5
-        lbls = np.array(lbls)
-        return imgs, lbls
+def loadIntoArrayLL(datasetSection, dataset, nClasses, start, end, iterators:DatasetIteratorInfo, imageIndex, labelIndex):
+     # create empty arrays for images and labels
+    output_shapes = next(dataset[datasetSection].as_numpy_iterator())[0].shape
+    imgs = np.zeros((end - start,) + output_shapes).astype('float')
+    lbls = np.zeros((end - start, nClasses)).astype('int')
+    
+    # load data into arrays
+    iterator = dataset[datasetSection].as_numpy_iterator()
+    for i, (img, label) in enumerate(itertools.islice(iterator, start, end)):
+        img = np.expand_dims(img.astype('float'), axis=0)
+        img = (img - 127.5) / 127.5
+        imgs[i] = img
+        lbls[i, label] = 1
+    return imgs, lbls

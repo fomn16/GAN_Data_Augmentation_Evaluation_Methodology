@@ -72,9 +72,8 @@ class Classifier_MNIST:
         infoFile.write(report)
         infoFile.close()
 
-    def train(self, generator, nGenData, extraEpochs = 1):
+    def train(self, generator, dataset, extraEpochs = 1):
         ''', aug = False):'''
-        imgs, lbls = generator.generate(nGenData)
         trainName = generator.name
         
         self.create()
@@ -90,12 +89,13 @@ class Classifier_MNIST:
             iaa.GaussianBlur(sigma=(0, 2.0))
         ])'''
 
-        nBatches = int(imgs.shape[0]/self.batchSize)
+        nBatches = int(dataset.trainInstances/self.batchSize)
         for epoch in range(round(self.nEpochs * extraEpochs)):
+            imgs,lbls = generator.generate(self.batchSize*nBatches)
             for i in range(nBatches):
-                imgBatch = imgs[i*self.batchSize:(i+1)*self.batchSize]
-                labelBatch = lbls[i*self.batchSize:(i+1)*self.batchSize]
-
+                imgBatch = imgs[i*nBatches:(i+1)*nBatches]
+                labelBatch = lbls[i*nBatches:(i+1)*nBatches]
+                #imgBatch, labelBatch = generator.generate(self.batchSize)
                 '''if(aug):
                     imgBatch = seq(images=imgBatch)'''
                 

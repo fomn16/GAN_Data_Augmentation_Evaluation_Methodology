@@ -116,19 +116,20 @@ class GAN_MNIST:
         )
 
     #treinamento GAN
-    def train(self, data):
-        imgs, lbls = data
+    def train(self, dataset):
         benchNoise = np.random.uniform(-1,1, size=(256,self.noiseDim))
         genLossHist = []
         discLossHist = []
        
         #infoFile = open(self.basePath + '/info.txt', 'w')
         #infoFile.close()
+        imgs, lbls = dataset.getAllTrainData()
         for epoch in range(self.ganEpochs):
-            nBatches = int(imgs.shape[0]/self.batchSize)
+            nBatches = int(dataset.trainInstances/self.batchSize)
             for i in range(nBatches):
                 imgBatch = imgs[i*self.batchSize:(i+1)*self.batchSize]
                 labelBatch = lbls[i*self.batchSize:(i+1)*self.batchSize]
+                #imgBatch, labelBatch = dataset.getTrainData(i*self.batchSize,(i+1)*self.batchSize)
                 genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                 genImgOutput, genLabelOutput = self.generator.predict(genInput, verbose=0)
 

@@ -12,19 +12,20 @@ class MNIST:
         self.name = params.datasetName
         self.dataset, self.info = tfds.load(name = params.datasetName, with_info=True, as_supervised=True, data_dir=params.dataDir)
 
-        imgs1, lbls1 = loadIntoArray(self.dataset['train'], params.nClasses)
+        '''imgs1, lbls1 = loadIntoArray(self.dataset['train'], params.nClasses)
         imgs2, lbls2 = loadIntoArray(self.dataset['test'], params.nClasses)
         self.imgs = np.concatenate((imgs1, imgs2))
         self.lbls = np.concatenate((lbls1, lbls2))
         totalEntries = self.imgs.shape[0]
-        self.n = int(np.floor(totalEntries/params.kFold))
+        self.n = int(np.floor(totalEntries/params.kFold))'''
 
-
-        self.total_instances = self.info.splits['test'].num_examples + self.info.splits['train'].num_examples
-        self.n_instances_fold = int(np.floor(self.total_instances/self.params.kFold))
+        self.trainInstances = self.info.splits['train'].num_examples
+        self.testInstances = self.info.splits['test'].num_examples
+        self.totalInstances = self.trainInstances + self.testInstances
+        self.n_instances_fold = int(np.floor(self.totalInstances/self.params.kFold))
 
         self.datasetIterators = DatasetIteratorInfo(self.dataset['train'].as_numpy_iterator(), self.dataset['test'].as_numpy_iterator())
-
+    
     def loadParams(self):
         self.params.datasetName = 'mnist'
         self.params.nClasses = 10
@@ -32,7 +33,7 @@ class MNIST:
         self.params.imgWidth = 28
         self.params.imgHeight = 28
 
-    def getTrainData(self):
+    '''def getTrainData(self):
         trainImgs = self.imgs[:self.params.currentFold*self.n]
         trainLbls = self.lbls[:self.params.currentFold*self.n]
         trainImgs = np.concatenate((trainImgs, self.imgs[(self.params.currentFold + 1)*self.n:]))
@@ -49,38 +50,35 @@ class MNIST:
         imgs2, lbls2 = loadIntoArray(self.dataset['test'], self.params.nClasses)
         imgs = np.concatenate((imgs1, imgs2))
         lbls = np.concatenate((lbls1, lbls2))
-        return imgs, lbls
+        return imgs, lbls'''
     
-    def getNTrain(self):
-        return self.info.splits['train'].num_examples
+    def getTrainData(self, start, end):
+        return self._getFromDatasetLL(start, end)
+
+    def getTestData(self, start, end):
+        return self._getFromDatasetLL(start, end, True)
     
-    def getNTest(self):
-        return self.info.splits['test'].num_examples
+    def getAllTrainData(self):
+        return self._getFromDatasetLL(0, self.trainInstances-1)
+    
+    def getAllTestData(self):
+        return self._getFromDatasetLL(0, self.testInstances-1, True)
     
     #carrega instancias do dataset usando lazy loading dos dados
-    def getFromDatasetLL(self, start, end, test=False):
-        testEntries = self.info.splits['test'].num_examples
-        trainEntries = self.info.splits['train'].num_examples
-        totalEntries = testEntries + trainEntries
-        n = int(np.floor(totalEntries/self.params.kFold))
-
+    def _getFromDatasetLL(self, start, end, test=False):
         if(test):
-            start += self.params.currentFold*n
-            end += self.params.currentFold*n
-        
+            start += self.params.currentFold*self.n_instances_fold
+            end += self.params.currentFold*self.n_instances_fold
         imgs = None
         lbls = None
-        if(end < trainEntries):
-            imgs, lbls = loadIntoArrayLL('train', self.dataset, start, end, self.datasetIterators)
-        elif (start >= trainEntries):
-            imgs, lbls = loadIntoArrayLL('test', self.dataset, start - trainEntries, end - trainEntries, self.datasetIterators)
+        if(end < self.trainInstances):
+            imgs, lbls = loadIntoArrayLL('train', self.dataset, self.params.nClasses, start, end, self.datasetIterators, 0, 1)
+        elif (start >= self.trainInstances):
+            imgs, lbls = loadIntoArrayLL('test', self.dataset, self.params.nClasses, start - self.trainInstances, end - self.trainInstances, self.datasetIterators, 0, 1)
         else:
-            imgs1, lbls1 = loadIntoArrayLL('train', self.dataset, start, trainEntries - 1, self.datasetIterators)
-            imgs2, lbls2 = loadIntoArrayLL('test', self.dataset, 0, end - trainEntries, self.datasetIterators)
+            imgs1, lbls1 = loadIntoArrayLL('train', self.dataset, self.params.nClasses, start, self.trainInstances - 1, self.datasetIterators, 0, 1)
+            imgs2, lbls2 = loadIntoArrayLL('test', self.dataset, self.params.nClasses, 0, end - self.trainInstances, self.datasetIterators, 0, 1)
             imgs = np.concatenate((imgs1, imgs2))
             lbls = np.concatenate((lbls1, lbls2))
             del imgs1, imgs2, lbls1, lbls2
-
-        del testEntries, trainEntries, n, totalEntries
-
         return imgs, lbls

@@ -9,6 +9,9 @@ from Modules.Shared.Params import Params
 from Modules.Benchmark.Classifier_MNIST import Classifier_MNIST
 from Modules.Benchmark.TSNE_MNIST import TSNE_MNIST
 
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
+
 #carrega dataset
 params = Params()
 #local no qual os datasets serão salvos
@@ -26,28 +29,28 @@ for dataset in datasets:
         dataset.loadParams()
 
         generators = []
-        generators.append(DATASET_DIRECTLY(params))
         generators.append(CGAN_MNIST(params))
+        generators.append(DATASET_DIRECTLY(params))
         generators.append(GAN_MNIST(params))
         generators.append(MIXED(params, generators, {0,1}))
 
         #cria testes
         testers = []
-        testers.append(TSNE_MNIST(dataset, params))
         testers.append(Classifier_MNIST(params))
+        testers.append(TSNE_MNIST(params))
 
         for generator in generators:
             #treinando gan
             generator.compile()
-            generator.train(dataset.getTrainData())
+            generator.train(dataset)
 
             #salva resultado final
             generator.saveGenerationExample()
 
             #percorre os testes
             for tester in testers:
-                tester.train(generator, dataset.getNTrain())
-                tester.runTest(dataset.getTestData())
+                tester.train(generator, dataset)
+                tester.runTest(dataset.getAllTestData())
 
 
 '''

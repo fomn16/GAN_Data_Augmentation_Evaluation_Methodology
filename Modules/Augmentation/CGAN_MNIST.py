@@ -16,7 +16,6 @@ class CGAN_MNIST:
 
     initLr = 2e-4
     ganEpochs = 25
-    classifierEpochs = 8
     batchSize = 128
 
     generator = None
@@ -119,8 +118,7 @@ class CGAN_MNIST:
         )
 
     #treinamento GAN
-    def train(self, data):
-        imgs, lbls = data
+    def train(self, dataset):
         discLossHist = []
         genLossHist = []
 
@@ -135,11 +133,13 @@ class CGAN_MNIST:
 
         benchLabels = np.array([[1 if i == bl else 0 for i in range(self.nClasses)] for bl in benchLabels], dtype='float32')
 
+        imgs, lbls = dataset.getAllTrainData()
         for epoch in range(self.ganEpochs):
-            nBatches = int(imgs.shape[0]/self.batchSize)
+            nBatches = int(dataset.trainInstances/self.batchSize)
             for i in range(nBatches):
                 imgBatch = imgs[i*self.batchSize:(i+1)*self.batchSize]
                 labelBatch = lbls[i*self.batchSize:(i+1)*self.batchSize]
+                #imgBatch, labelBatch = dataset.getTrainData(i*self.batchSize,(i+1)*self.batchSize)
                 genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                 labelInput = np.random.randint(0,self.nClasses, size = (self.batchSize))
                 labelInput = np.array([[1 if i == li else 0 for i in range(self.nClasses)] for li in labelInput], dtype='float32')

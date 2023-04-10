@@ -16,18 +16,16 @@ class DATASET_DIRECTLY:
         pass
 
     #treinamento
-    def train(self, data):
-        self.imgs, self.lbls = data
+    def train(self, dataset):
+        self.dataset = dataset
 
     #Gera e salva imagens
     def saveGenerationExample(self, nEntries = 20):
-        images = self.imgs[:nEntries] 
-        labels = self.lbls[:nEntries]
+        start = np.random.randint(0, self.dataset.trainInstances - nEntries)
+        images, labels = self.dataset.getTrainData(start, start+nEntries)
         out = ((images * 127.5) + 127.5).astype('uint8')
         showOutputAsImg(out, self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a.argmax()) for a in labels]) + '.png',nEntries)
 
-    def generate(self, nEntries=None):
-        if(nEntries == None):
-            return self.imgs, self.lbls
-        else:
-            return self.imgs[:nEntries], self.lbls[:nEntries]
+    def generate(self, nEntries):
+        start = np.random.randint(0, self.dataset.trainInstances - nEntries)
+        return self.dataset.getTrainData(start, start+nEntries)

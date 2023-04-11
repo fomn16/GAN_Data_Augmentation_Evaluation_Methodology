@@ -22,6 +22,11 @@ from typing import List
 import sys
 sys.path.insert(1, '../../')
 
+from Modules.Datasets.Dataset import Dataset
+from Modules.Augmentation.Augmentator import Augmentator
+from Modules.Benchmark.Benchmark import Benchmark
+from Modules.Shared.Params import Params
+
 #Funções helper para apresentação de imagens e dados de treinamento
 def concatArray(a, n, colored):
     d = []

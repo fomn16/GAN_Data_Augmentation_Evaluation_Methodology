@@ -1,9 +1,8 @@
 import sys
 sys.path.insert(1, '../../')
 from Modules.Shared.helper import *
-from Modules.Shared.Params import Params
 
-class CGAN_CIFAR_10:
+class CGAN_CIFAR_10(Augmentator):
     #Constantes:
     genWidth = 4
     genHeight = 4
@@ -15,14 +14,14 @@ class CGAN_CIFAR_10:
     discFCOutputDim = 512
 
     initLr = 2e-4
-    ganEpochs = 50
+    ganEpochs = 2
     batchSize = 128
 
     generator = None
     discriminator = None
     gan = None
 
-    def __init__(self, params: Params, nameComplement = ""):
+    def __init__(self, params: Params, extraParams = None, nameComplement = ""):
         self.name = self.__class__.__name__ + nameComplement
 
         self.currentFold = params.currentFold
@@ -126,7 +125,7 @@ class CGAN_CIFAR_10:
         )
 
     #treinamento GAN
-    def train(self, dataset):
+    def train(self, dataset: Dataset):
         discLossHist = []
         genLossHist = []
 
@@ -190,7 +189,7 @@ class CGAN_CIFAR_10:
                 self.gan.save(verifiedFolder(epochPath + '/gan'))
 
     #Gera e salva imagens
-    def saveGenerationExample(self):
+    def saveGenerationExample(self, nEntries = 20):
         noise = np.random.uniform(-1,1, size=(self.nClasses,self.noiseDim))
         labels = np.array([[1 if i == j else 0 for i in range(self.nClasses)] for j in range(self.nClasses)], dtype='float32')
         images = self.generator.predict([noise, labels])

@@ -1,10 +1,9 @@
 import sys
 sys.path.insert(1, '../../')
 from Modules.Shared.helper import *
-from Modules.Shared.Params import Params
 
-class DATASET_DIRECTLY:
-    def __init__(self, params:Params, nameComplement = ""):
+class DATASET_DIRECTLY(Augmentator):
+    def __init__(self, params:Params, extraParams = None, nameComplement = ""):
         self.name = self.__class__.__name__ + "_" + params.datasetName + "_" + nameComplement
 
         self.currentFold = params.currentFold
@@ -12,12 +11,8 @@ class DATASET_DIRECTLY:
         self.basePath = verifiedFolder('runtime/trainingStats/' + self.name)
         self.params = params
 
-    #compilando discriminador e gan
-    def compile(self):
-        pass
-
     #treinamento
-    def train(self, dataset):
+    def train(self, dataset: Dataset):
         self.dataset = dataset
 
     #Gera e salva imagens

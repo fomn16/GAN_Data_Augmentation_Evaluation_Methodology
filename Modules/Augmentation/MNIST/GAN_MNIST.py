@@ -1,9 +1,8 @@
 import sys
 sys.path.insert(1, '../../')
 from Modules.Shared.helper import *
-from Modules.Shared.Params import Params
 
-class GAN_MNIST:
+class GAN_MNIST(Augmentator):
     #Constantes:
     genWidth = 7
     genHeight = 7
@@ -23,7 +22,7 @@ class GAN_MNIST:
     discriminator = None
     gan = None
 
-    def __init__(self, params: Params, nameComplement = ""):
+    def __init__(self, params: Params, extraParams = None, nameComplement = ""):
         self.name = self.__class__.__name__ + nameComplement
 
         self.currentFold = params.currentFold
@@ -116,7 +115,7 @@ class GAN_MNIST:
         )
 
     #treinamento GAN
-    def train(self, dataset):
+    def train(self, dataset: Dataset):
         benchNoise = np.random.uniform(-1,1, size=(256,self.noiseDim))
         genLossHist = []
         discLossHist = []

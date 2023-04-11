@@ -1,10 +1,7 @@
-#Z:\felip\Documents\UNB\TCC\modulos
 from Modules.Shared.helper import *
+from Modules.Shared.config import *
 from Modules.Datasets.MNIST import MNIST
 from Modules.Datasets.CIFAR_10 import CIFAR_10
-from Modules.Datasets.Dataset import Dataset
-from Modules.Shared.Params import Params
-from Modules.Shared.config import *
 
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
@@ -26,14 +23,14 @@ for dataset in datasets:
         params.currentFold = fold
         dataset.loadParams()
 
-        augmentators = []
+        augmentators : List[Augmentator] = []
         augmentators.append(getAugmentator(Augmentators.CGAN, params))
         augmentators.append(getAugmentator(Augmentators.DIRECT, params))
         augmentators.append(getAugmentator(Augmentators.GAN, params))
-        augmentators.append(getAugmentator(Augmentators.MIXED, params, augmentators, {0,1}))
+        augmentators.append(getAugmentator(Augmentators.MIXED, params, [augmentators, {0,1}]))
 
         #cria testes
-        benchmarks = []
+        benchmarks : List[Benchmark] = []
         benchmarks.append(getBenchmark(Benchmarks.CLASSIFIER, params))
         benchmarks.append(getBenchmark(Benchmarks.TSNE_INCEPTION, params))
 
@@ -50,7 +47,7 @@ for dataset in datasets:
                 for benchmark in benchmarks:
                     if(benchmark != None):
                         benchmark.train(augmentator, dataset)
-                        benchmark.runTest(dataset.getAllTestData())
+                        benchmark.runTest(dataset)
 
 
 '''

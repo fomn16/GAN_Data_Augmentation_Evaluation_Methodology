@@ -4,11 +4,11 @@ import cv2
 import seaborn as sns
 sys.path.insert(1, '../../')
 from Modules.Shared.helper import *
-from Modules.Shared.Params import Params
+
 from tensorflow.keras.applications.inception_v3 import InceptionV3
 from sklearn.manifold import TSNE
 
-class TSNE_INCEPTION:
+class TSNE_INCEPTION(Benchmark):
     nClasses = 10
     enlargedWidth = 84
     enlargedHeight = 84
@@ -24,7 +24,7 @@ class TSNE_INCEPTION:
         self.inceptionModel = InceptionV3(input_shape = (self.enlargedWidth, self.enlargedHeight, 3), include_top = False)
         self.params = params
 
-    def train(self, generator, dataset, extraEpochs = 1):
+    def train(self, augmentator: Augmentator, dataset: Dataset, extraEpochs = 1):
         p = None
         labels = None
         nEntries = int(np.floor(dataset.totalInstances/self.params.kFold))
@@ -44,7 +44,7 @@ class TSNE_INCEPTION:
                 resizedImgs.append(untyped)
                 del untyped
 
-            genImgs, genLbls = generator.generate(self.inceptionBatchSize)
+            genImgs, genLbls = augmentator.generate(self.inceptionBatchSize)
                 
             genLbls = [np.argmax(lbl) + self.nClasses for lbl in genLbls]
 
@@ -98,7 +98,7 @@ class TSNE_INCEPTION:
                         palette=sns.color_palette("colorblind", 2* self.nClasses),
                         data=df,s=5,alpha=0.3).set(title="Projeção T-SNE do dataset original e gerado")
 
-        plt.savefig(verifiedFolder(self.basePath + '/' + generator.name + '/todos.png'))
+        plt.savefig(verifiedFolder(self.basePath + '/' + augmentator.name + '/todos.png'))
         plt.clf()
 
         for j in range(self.nClasses):
@@ -119,9 +119,6 @@ class TSNE_INCEPTION:
                             palette=sns.color_palette("colorblind", 2),
                             data=df2,s=5,alpha=0.3).set(title="Projeção T-SNE do dataset original e gerado classe " + str(j))
 
-            plt.savefig(verifiedFolder(self.basePath + '/' + generator.name + '/classe_' + str(j) + '.png'))
+            plt.savefig(verifiedFolder(self.basePath + '/' + augmentator.name + '/classe_' + str(j) + '.png'))
 
             plt.clf()
-
-    def runTest(self, data):
-        pass

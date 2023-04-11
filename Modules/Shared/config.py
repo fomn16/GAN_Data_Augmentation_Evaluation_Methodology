@@ -1,6 +1,7 @@
 import sys
 sys.path.insert(1, '../../')
 from Modules.Shared.Params import Params
+from Modules.Shared.helper import *
 
 from Modules.Benchmark.MNIST.Classifier_MNIST import Classifier_MNIST
 from Modules.Benchmark.TSNE_INCEPTION import TSNE_INCEPTION
@@ -29,24 +30,24 @@ class Benchmarks:
     CLASSIFIER = "classifier"
     TSNE_INCEPTION = "tsne_inception"
 
-def getAugmentator(augmentator, params: Params, generators = None, ids = None):
+def getAugmentator(augmentator, params:Params, extraParams = None, nameComplement = "") -> Augmentator | None:
     if(augmentator == Augmentators.GAN):
         if(params.datasetName == Datasets.MNIST):
-            return GAN_MNIST(params)
+            return GAN_MNIST(params, extraParams, nameComplement)
         if(params.datasetName == Datasets.CIFAR_10):
-            return GAN_CIFAR_10(params)
+            return GAN_CIFAR_10(params, extraParams, nameComplement)
     elif(augmentator == Augmentators.CGAN):
         if(params.datasetName == Datasets.MNIST):
-            return CGAN_MNIST(params)
+            return CGAN_MNIST(params, extraParams, nameComplement)
         if(params.datasetName == Datasets.CIFAR_10):
-            return CGAN_CIFAR_10(params)
+            return CGAN_CIFAR_10(params, extraParams, nameComplement)
     elif(augmentator == Augmentators.DIRECT):
-        return DATASET_DIRECTLY(params)
+        return DATASET_DIRECTLY(params, extraParams, nameComplement)
     elif(augmentator == Augmentators.MIXED):
-        return MIXED(params, generators, ids)
+        return MIXED(params, extraParams, nameComplement)
     return None
 
-def getBenchmark(benchmark, params: Params):
+def getBenchmark(benchmark, params: Params, nameComplement = "") -> Benchmark | None:
     if(benchmark == Benchmarks.CLASSIFIER):
         if(params.datasetName == Datasets.MNIST):
             return Classifier_MNIST(params)

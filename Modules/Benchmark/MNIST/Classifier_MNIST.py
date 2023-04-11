@@ -3,7 +3,7 @@ sys.path.insert(1, '../../')
 from Modules.Shared.helper import *
 from Modules.Shared.Params import Params
 
-class Classifier_MNIST:
+class Classifier_MNIST(Benchmark):
     #constantes
     leakyReluAlpha = 0.2
     FCOutputDim = 512
@@ -61,20 +61,9 @@ class Classifier_MNIST:
     def create(self):
         self.classifier = load_model(self.basePath + "/modelSaves/init/fold_" + str(self.currentFold))
 
-    def runTest(self, data):
-        imgs, lbls = data
-        classOutput = self.classifier.predict(imgs, verbose=0)
-        classOutput = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in classOutput]
-        report = classification_report(lbls, classOutput) + '\nauroc score: ' + str(roc_auc_score(lbls, classOutput)) + '\n'
-
-        print(report)
-        infoFile = open(self.basePath + '/info.txt', 'a')
-        infoFile.write(report)
-        infoFile.close()
-
-    def train(self, generator, dataset, extraEpochs = 1):
+    def train(self, augmentator: Augmentator, dataset: Dataset, extraEpochs = 1):
         ''', aug = False):'''
-        trainName = generator.name
+        trainName = augmentator.name
         
         self.create()
         classLossHist = []
@@ -91,11 +80,11 @@ class Classifier_MNIST:
 
         nBatches = int(dataset.trainInstances/self.batchSize)
         for epoch in range(round(self.nEpochs * extraEpochs)):
-            imgs,lbls = generator.generate(self.batchSize*nBatches)
+            imgs,lbls = augmentator.generate(self.batchSize*nBatches)
             for i in range(nBatches):
                 imgBatch = imgs[i*nBatches:(i+1)*nBatches]
                 labelBatch = lbls[i*nBatches:(i+1)*nBatches]
-                #imgBatch, labelBatch = generator.generate(self.batchSize)
+                #imgBatch, labelBatch = augmentator.generate(self.batchSize)
                 '''if(aug):
                     imgBatch = seq(images=imgBatch)'''
                 
@@ -115,3 +104,14 @@ class Classifier_MNIST:
             if(epoch % 5 == 0 or epoch == self.nEpochs * extraEpochs - 1):
                 self.classifier.save(verifiedFolder(self.basePath + '/modelSaves/' + trainName + '/fold_' + str(self.currentFold) + '/epoch_' + str(epoch)))
         self.classifier.save(verifiedFolder(self.basePath + '/modelSaves/' + trainName + '/fold_' + str(self.currentFold) + '/final'))
+
+    def runTest(self, dataset: Dataset):
+        imgs, lbls = dataset.getAllTestData()
+        classOutput = self.classifier.predict(imgs, verbose=0)
+        classOutput = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in classOutput]
+        report = classification_report(lbls, classOutput) + '\nauroc score: ' + str(roc_auc_score(lbls, classOutput)) + '\n'
+
+        print(report)
+        infoFile = open(self.basePath + '/info.txt', 'a')
+        infoFile.write(report)
+        infoFile.close()

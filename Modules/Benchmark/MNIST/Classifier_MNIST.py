@@ -17,13 +17,14 @@ class Classifier_MNIST(Benchmark):
         self.name = self.__class__.__name__ + nameComplement
 
         self.nClasses = params.nClasses
-        self.basePath = verifiedFolder('runtime/trainingStats/' + self.name)
+        self.basePath = verifiedFolder('runtime_' + params.runtime + '/trainingStats/' + self.name)
         self.currentFold = params.currentFold
 
         self.imgChannels = params.imgChannels
         self.imgWidth = params.imgWidth
         self.imgHeight = params.imgHeight
 
+        self.params = params
         #infoFile = open(self.basePath + '/info.txt', 'w')
         #infoFile.close()
 
@@ -51,7 +52,7 @@ class Classifier_MNIST(Benchmark):
         self.classifier = keras.Model(inputs = classInput, outputs = classOutput, name = 'classifier')
 
         keras.utils.plot_model(
-            self.classifier, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime/modelArchitecture/' + self.name + '.png')
+            self.classifier, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '.png')
         )
 
         optClass = Adam(learning_rate = self.initLr, beta_1 = 0.5, decay = self.initLr/self.nEpochs)

@@ -19,7 +19,7 @@ class TSNE_INCEPTION(Benchmark):
         self.name = self.__class__.__name__ + nameComplement
 
         self.nClasses = params.nClasses
-        self.basePath = verifiedFolder('runtime/trainingStats/' + self.name + '/fold_' + str(params.currentFold))
+        self.basePath = verifiedFolder('runtime_' + params.runtime + '/trainingStats/' + self.name + '/fold_' + str(params.currentFold))
 
         self.inceptionModel = InceptionV3(input_shape = (self.enlargedWidth, self.enlargedHeight, 3), include_top = False)
         self.params = params

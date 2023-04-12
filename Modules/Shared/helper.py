@@ -1,6 +1,6 @@
 #imports de todas as bibliotecas utilizadas:
 from tensorflow.keras.models import Sequential, Model, load_model
-from tensorflow.keras.layers import Dense, BatchNormalization, Reshape, Conv2DTranspose, Conv2D, LeakyReLU, Flatten
+from tensorflow.keras.layers import Dense, BatchNormalization, Reshape, Conv2DTranspose, Conv2D, LeakyReLU, Flatten, Dropout
 from tensorflow.keras.optimizers import Adam
 from sklearn.utils import shuffle
 from sklearn.metrics import classification_report, roc_auc_score
@@ -18,6 +18,7 @@ from imgaug import augmenters as iaa
 import os
 import itertools
 from typing import List
+from datetime import datetime
 
 import sys
 sys.path.insert(1, '../../')

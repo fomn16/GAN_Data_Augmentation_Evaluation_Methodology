@@ -30,7 +30,7 @@ class Benchmarks:
     CLASSIFIER = "classifier"
     TSNE_INCEPTION = "tsne_inception"
 
-def getAugmentator(augmentator, params:Params, extraParams = None, nameComplement = "") -> Augmentator | None:
+def getAugmentator(augmentator, params:Params, extraParams = None, nameComplement = "") -> Augmentator:
     if(augmentator == Augmentators.GAN):
         if(params.datasetName == Datasets.MNIST):
             return GAN_MNIST(params, extraParams, nameComplement)
@@ -47,7 +47,7 @@ def getAugmentator(augmentator, params:Params, extraParams = None, nameComplemen
         return MIXED(params, extraParams, nameComplement)
     return None
 
-def getBenchmark(benchmark, params: Params, nameComplement = "") -> Benchmark | None:
+def getBenchmark(benchmark, params: Params, nameComplement = "") -> Benchmark:
     if(benchmark == Benchmarks.CLASSIFIER):
         if(params.datasetName == Datasets.MNIST):
             return Classifier_MNIST(params)

@@ -10,7 +10,7 @@ class MIXED(Augmentator):
         self.name = '_'.join([arr[id].name for id in ids]) + '_' + self.__class__.__name__ + nameComplement
 
         self.currentFold = params.currentFold
-        self.basePath = verifiedFolder('runtime/trainingStats/' + self.name)
+        self.basePath = verifiedFolder('runtime_' + params.runtime + '/trainingStats/' + self.name)
         self.arr = arr
         self.ids = ids
 

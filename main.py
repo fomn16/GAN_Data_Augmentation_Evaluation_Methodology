@@ -13,6 +13,7 @@ params.dataDir = './tfDatasets'
 #validação cruzada
 params.kFold = 5
 params.currentFold = 0
+params.runtime = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
 
 datasets : List[Dataset] = []
 datasets.append(CIFAR_10(params))

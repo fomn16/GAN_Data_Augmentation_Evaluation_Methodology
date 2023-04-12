@@ -11,3 +11,4 @@ class Params:
     imgHeight = None
     dataDir = None
     datasetName = None
+    runtime = None

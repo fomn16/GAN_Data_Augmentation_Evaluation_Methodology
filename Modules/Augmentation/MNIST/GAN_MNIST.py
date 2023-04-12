@@ -27,11 +27,13 @@ class GAN_MNIST(Augmentator):
 
         self.currentFold = params.currentFold
         self.nClasses = params.nClasses
-        self.basePath = verifiedFolder('runtime/trainingStats/' + self.name)
+        self.basePath = verifiedFolder('runtime_' + params.runtime + '/trainingStats/' + self.name)
 
         self.imgChannels = params.imgChannels
         self.imgWidth = params.imgWidth
         self.imgHeight = params.imgHeight
+
+        self.params = params
 
     #Cria model geradora com keras functional API
     def createGenModel(self):
@@ -62,7 +64,7 @@ class GAN_MNIST(Augmentator):
         self.generator = keras.Model(inputs = genInput, outputs = [genOutput, labelOutput], name = 'generator')
         
         keras.utils.plot_model(
-            self.generator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime/modelArchitecture/' + self.name + '/generator.png')
+            self.generator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/generator.png')
         )
 
     #Cria model discriminadora com functional API
@@ -92,7 +94,7 @@ class GAN_MNIST(Augmentator):
         self.discriminator = keras.Model(inputs = [discInput, labelInput], outputs = discOutput, name = 'discriminator')
 
         keras.utils.plot_model(
-            self.discriminator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime/modelArchitecture/' + self.name + '/discriminator.png')
+            self.discriminator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/discriminator.png')
         )
 
     #compilando discriminador e gan
@@ -111,7 +113,7 @@ class GAN_MNIST(Augmentator):
         self.gan.compile(loss= 'binary_crossentropy', optimizer=optGan)
 
         keras.utils.plot_model(
-            self.gan, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime/modelArchitecture/' + self.name + '/gan.png')
+            self.gan, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/gan.png')
         )
 
     #treinamento GAN

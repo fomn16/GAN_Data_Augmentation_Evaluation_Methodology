@@ -14,7 +14,7 @@ class CGAN_CIFAR_10(Augmentator):
     leakyReluAlpha = 0.2
     discFCOutputDim = 2048
 
-    initLr = 2e-4
+    initLr = 1e-4
     ganEpochs = 50
     batchSize = 128
 
@@ -89,20 +89,38 @@ class CGAN_CIFAR_10(Augmentator):
         cgenOutput = self.AddBlockTranspose(cgenX, 2, 3, True)'''
 
         model = layers.Conv2DTranspose(filters=128, kernel_size=(3,3), padding='same', activation='relu', strides=(2,2))(cgenX)
+        model = layers.Conv2D(filters=128, kernel_size=(3,3), padding='same', activation='relu')(model)
+        model = layers.BatchNormalization(axis=-1)(model)
+        model = layers.Dropout(0.2)(model)
+        model = layers.Conv2D(filters=128, kernel_size=(3,3), padding='same', activation='relu')(model)
         model = layers.BatchNormalization(axis=-1)(model)
         model = layers.Dropout(0.2)(model)
 
         model = layers.Conv2DTranspose(filters=64, kernel_size=(3,3), padding='same', activation='relu', strides=(2,2))(model)
+        model = layers.Conv2D(filters=64, kernel_size=(3,3), padding='same', activation='relu')(model)
+        model = layers.BatchNormalization(axis=-1)(model)
+        model = layers.Dropout(0.2)(model)
+        model = layers.Conv2D(filters=64, kernel_size=(3,3), padding='same', activation='relu')(model)
+        model = layers.BatchNormalization(axis=-1)(model)
+        model = layers.Dropout(0.2)(model)
         model = layers.BatchNormalization(axis=-1)(model)
         model = layers.Dropout(0.2)(model)
 
         model = layers.Conv2DTranspose(filters=32, kernel_size=(3,3), padding='same', activation='relu', strides=(2,2))(model)
+        model = layers.Conv2D(filters=32, kernel_size=(3,3), padding='same', activation='relu')(model)
+        model = layers.BatchNormalization(axis=-1)(model)
+        model = layers.Dropout(0.2)(model)
+        model = layers.Conv2D(filters=32, kernel_size=(3,3), padding='same', activation='relu')(model)
+        model = layers.BatchNormalization(axis=-1)(model)
+        model = layers.Dropout(0.2)(model)
         model = layers.BatchNormalization(axis=-1)(model)
         model = layers.Dropout(0.2)(model)
 
         model = layers.MaxPool2D(pool_size=(2,2), strides=(2,2), padding='valid')(model)
 
-        cgenOutput = layers.Conv2DTranspose(filters=3, kernel_size=(3,3), padding='same', activation='tanh', strides=(2,2), name = 'genOutput_img')(model)
+        model = layers.Conv2DTranspose(filters=3, kernel_size=(3,3), padding='same', activation='relu', strides=(2,2))(model)
+        model = layers.Conv2D(filters=3, kernel_size=(3,3), padding='same', activation='relu')(model)
+        cgenOutput = layers.Conv2D(filters=3, kernel_size=(3,3), padding='same', activation='tanh', name = 'genOutput_img')(model)
 
         self.generator = keras.Model(inputs = [cgenNoiseInput, cgenLabelInput], outputs = cgenOutput, name = 'cgenerator')
 
@@ -114,9 +132,9 @@ class CGAN_CIFAR_10(Augmentator):
     def createDiscModel(self):
         discInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'discinput_img')
 
-        discX = self.AddBlock(discInput, 3, 16)
-        discX = self.AddBlock(discX, 3, 32)
-        discX = self.AddBlock(discX, 3, 64)
+        discX = self.AddBlock(discInput, 4, 16)
+        discX = self.AddBlock(discX, 4, 32)
+        discX = self.AddBlock(discX, 4, 64)
 
         # camada densa
         discX = layers.Flatten()(discX)

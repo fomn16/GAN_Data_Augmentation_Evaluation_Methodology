@@ -17,7 +17,7 @@ params.runtime = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
 
 datasets : List[Dataset] = []
 datasets.append(CIFAR_10(params))
-datasets.append(MNIST(params))
+#datasets.append(MNIST(params))
 
 for dataset in datasets:
     for fold in range(params.kFold):
@@ -26,9 +26,9 @@ for dataset in datasets:
 
         augmentators : List[Augmentator] = []
         augmentators.append(getAugmentator(Augmentators.CGAN, params))
-        augmentators.append(getAugmentator(Augmentators.DIRECT, params))
-        augmentators.append(getAugmentator(Augmentators.GAN, params))
-        augmentators.append(getAugmentator(Augmentators.MIXED, params, [augmentators, {0,1}]))
+        #augmentators.append(getAugmentator(Augmentators.DIRECT, params))
+        #augmentators.append(getAugmentator(Augmentators.GAN, params))
+        #augmentators.append(getAugmentator(Augmentators.MIXED, params, [augmentators, {0,1}]))
 
         #cria testes
         benchmarks : List[Benchmark] = []

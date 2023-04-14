@@ -35,6 +35,33 @@ class CGAN_CIFAR_10(Augmentator):
 
         self.params = params
 
+
+    def AddBlock(self, inModel, nLayers: int, outDepth: int):
+        for i in range(nLayers):
+            if i == 0:
+                model = layers.Conv2D(filters=outDepth, kernel_size=(3,3), padding='same')(inModel)
+            else:
+                 model = layers.Conv2D(filters=outDepth, kernel_size=(3,3), padding='same')(model)
+            model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
+        model = layers.MaxPool2D(pool_size=(2,2), padding='valid', strides=(2,2))(model)
+        return model
+    
+    def AddBlockTranspose(self, inModel, nLayers: int, outDepth: int, lastBlock = False):
+        for i in range(nLayers-1):
+            if i == 0:
+                model = layers.Conv2DTranspose(filters=outDepth, kernel_size=(3,3), padding='same', activation='relu', strides=(2,2))(inModel)
+            else:
+                model = layers.Conv2DTranspose(filters=outDepth, kernel_size=(3,3), padding='same', activation='relu', strides=(2,2))(model)
+            model = layers.BatchNormalization(axis=-1)(model)
+            model = layers.MaxPool2D(pool_size=(2,2), padding='valid', strides=(2,2))(model)
+        if(not lastBlock): 
+            model = layers.Conv2DTranspose(filters=outDepth, kernel_size=(3,3), padding='same', activation='relu', strides=(2,2))(model)
+            model = layers.BatchNormalization(axis=-1)(model)
+            #model = layers.Dropout(0.5)(model)
+        else:
+            model = layers.Conv2DTranspose(filters=outDepth, kernel_size=(3,3), padding='same', activation='tanh', strides=(2,2), name = 'genOutput_img')(model)
+        return model
+    
     #Cria model geradora com keras functional API
     def createGenModel(self):
         cgenNoiseInput = keras.Input(shape=(self.noiseDim,), name = 'genInput_randomDistribution')
@@ -42,42 +69,40 @@ class CGAN_CIFAR_10(Augmentator):
 
         cgenX = layers.concatenate([cgenNoiseInput, cgenLabelInput])
 
-        # cria camada de entrada, com noiseDim + nClasses entradas, saída de tamanho genFCOutputDim, e ativação relu
+        # cria camada de entrada, com noiseDim entradas, saída de tamanho sCOutputDim, e ativação relu
         # entrada -> tamanho escolhido
         cgenX = layers.Dense(self.genFCOutputDim, activation='relu')(cgenX)
+        cgenX = layers.BatchNormalization()(cgenX)
+        cgenX = layers.Dropout(0.2)(cgenX)
 
         # cria camada que converte saída da primeira camada para o número de nós necessário na entrada
         # das camadas convolucionais
         cgenX = layers.Dense(units=self.genWidth*self.genHeight*self.genDepth, activation='relu')(cgenX)
         cgenX = layers.BatchNormalization()(cgenX)
+        cgenX = layers.Dropout(0.2)(cgenX)
 
         # Faz reshape para dimensões espaciais desejadas
         cgenX = layers.Reshape((self.genWidth, self.genHeight, self.genDepth))(cgenX)
-        cgenX = layers.Dropout(0.5)(cgenX)
 
-        # convolução transposta (genWidth,genHeight,genDepth =/ strides)
-        cgenX = layers.Conv2DTranspose(filters=128, kernel_size=(3,3), strides=(2,2), padding='same', activation='relu')(cgenX)
-        cgenX = layers.BatchNormalization(axis=-1)(cgenX)
+        '''cgenX = self.AddBlockTranspose(cgenX, 2, 64)
+        cgenX = self.AddBlockTranspose(cgenX, 2, 32)
+        cgenOutput = self.AddBlockTranspose(cgenX, 2, 3, True)'''
 
-        # convolução transposta (genWidth,genHeight,genDepth =/ strides)
-        cgenX = layers.Conv2DTranspose(filters=64, kernel_size=(5,5), strides=(2,2), padding='same', activation='relu')(cgenX)
+        model = layers.Conv2DTranspose(filters=128, kernel_size=(3,3), padding='same', activation='relu', strides=(2,2))(cgenX)
+        model = layers.BatchNormalization(axis=-1)(model)
+        model = layers.Dropout(0.2)(model)
 
-        # convolução transposta (genWidth,genHeight,genDepth =/ strides)
-        cgenX = layers.Conv2DTranspose(filters=32, kernel_size=(5,5), strides=(2,2), padding='same', activation='relu')(cgenX)
-        cgenX = layers.BatchNormalization(axis=-1)(cgenX)
+        model = layers.Conv2DTranspose(filters=64, kernel_size=(3,3), padding='same', activation='relu', strides=(2,2))(model)
+        model = layers.BatchNormalization(axis=-1)(model)
+        model = layers.Dropout(0.2)(model)
 
-        # convolução transposta (genWidth,genHeight,genDepth =/ strides)
-        cgenX = layers.Conv2DTranspose(filters=16, kernel_size=(5,5), strides=(2,2), padding='same', activation='relu')(cgenX)
+        model = layers.Conv2DTranspose(filters=32, kernel_size=(3,3), padding='same', activation='relu', strides=(2,2))(model)
+        model = layers.BatchNormalization(axis=-1)(model)
+        model = layers.Dropout(0.2)(model)
 
-        # convolução transposta (genWidth,genHeight,genDepth =/ strides)
-        cgenX = layers.Conv2DTranspose(filters=8, kernel_size=(5,5), strides=(2,2), padding='same', activation='relu')(cgenX)
-        cgenX = layers.Dropout(0.5)(cgenX)
-        
-        cgenX = layers.MaxPool2D(pool_size=(8,8), padding='valid')(cgenX)
+        model = layers.MaxPool2D(pool_size=(2,2), strides=(2,2), padding='valid')(model)
 
-        # camada convolucional que tem como output a imagem de saída
-        # tanh é usado pois é necessária saída de espaço limitado
-        cgenOutput = layers.Conv2DTranspose(filters=self.imgChannels, kernel_size=(7,7), strides=(2,2), padding='same', activation='tanh', name = 'genOutput_img')(cgenX)
+        cgenOutput = layers.Conv2DTranspose(filters=3, kernel_size=(3,3), padding='same', activation='tanh', strides=(2,2), name = 'genOutput_img')(model)
 
         self.generator = keras.Model(inputs = [cgenNoiseInput, cgenLabelInput], outputs = cgenOutput, name = 'cgenerator')
 
@@ -89,30 +114,21 @@ class CGAN_CIFAR_10(Augmentator):
     def createDiscModel(self):
         discInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'discinput_img')
 
-        discX = layers.Conv2D(filters=32, kernel_size=(7,7), padding='same', strides=(2,2))(discInput)
-        discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
+        discX = self.AddBlock(discInput, 3, 16)
+        discX = self.AddBlock(discX, 3, 32)
+        discX = self.AddBlock(discX, 3, 64)
 
-        discX = layers.Conv2D(filters=64, kernel_size=(5,5), padding='same', strides=(2,2))(discX)
-        discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
-
-        # primeira camada convolucional, recebe formato das imagens
-        discX = layers.Conv2D(filters=128, kernel_size=(5,5), padding='same', strides=(2,2))(discX)
-        discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
-
-        # primeira camada convolucional, recebe formato das imagens
-        discX = layers.Conv2D(filters=256, kernel_size=(3,3), padding='same', strides=(2,2))(discX)
-        discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
-
-        #discX = layers.MaxPool2D(pool_size=(2,2), padding='valid', strides=(2,2))(discX)
         # camada densa
         discX = layers.Flatten()(discX)
-        #discX = layers.Dropout(0.2)(discX)
+
+        discX = layers.Dense(self.discFCOutputDim)(discX)
+        discX = layers.Dropout(0.5)(discX)
 
         labelInput = keras.Input(shape=(self.nClasses,), name = 'discinput_label')
         discX = layers.concatenate([discX, labelInput])
 
-        #discX = layers.Dense(self.discFCOutputDim)(discX)
-        #discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
+        discX = layers.Dense(self.discFCOutputDim)(discX)
+        discX = layers.Dropout(0.5)(discX)
 
         # nó de output, sigmoid->mapear em 0 ou 1
         discOutput = layers.Dense(1, activation='sigmoid', name = 'discoutput_realvsfake')(discX)

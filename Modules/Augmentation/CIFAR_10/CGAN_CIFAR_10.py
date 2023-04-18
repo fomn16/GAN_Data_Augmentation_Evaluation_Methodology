@@ -46,7 +46,6 @@ class CGAN_CIFAR_10(Augmentator):
                  model = layers.Conv2D(filters=outDepth, kernel_size=(3,3), padding='same', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
             model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
             model = layers.Dropout(self.dropoutParam)(model)
-            #model = layers.BatchNormalization(axis=-1)(model)
         model = layers.MaxPool2D(pool_size=(2,2), padding='valid', strides=(2,2))(model)
         return model
     
@@ -58,7 +57,6 @@ class CGAN_CIFAR_10(Augmentator):
                 model = layers.Conv2DTranspose(filters=outDepth, kernel_size=(3,3), padding='same', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
             model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
             model = layers.Dropout(self.dropoutParam)(model)
-            #model = layers.BatchNormalization(axis=-1)(model)
         return model
     
     #Cria model geradora com keras functional API
@@ -73,7 +71,6 @@ class CGAN_CIFAR_10(Augmentator):
         cgenX = layers.Dense(self.genFCOutputDim)(cgenX)
         cgenX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(cgenX)
         cgenX = layers.Dropout(self.dropoutParam)(cgenX)
-        #cgenX = layers.BatchNormalization()(cgenX)
 
         # cria camada que converte saída da primeira camada para o número de nós necessário na entrada
         # das camadas convolucionais
@@ -91,7 +88,7 @@ class CGAN_CIFAR_10(Augmentator):
 
         model = self.AddBlockTranspose(model, 1, 128)
 
-        cgenX = layers.BatchNormalization()(cgenX)
+        model = layers.BatchNormalization()(model)
 
         cgenOutput = layers.Conv2D(filters=3, kernel_size=(3,3), padding='same', activation='tanh',  name = 'genOutput_img', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
         
@@ -114,10 +111,8 @@ class CGAN_CIFAR_10(Augmentator):
         # camada densa
         discX = layers.Flatten()(discX)
 
-        discX = layers.Dense(self.discFCOutputDim)(discX)
-        discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
+        discX = layers.Dense(self.discFCOutputDim, activation="tanh")(discX)
         discX = layers.Dropout(self.dropoutParam)(discX)
-        #discX = layers.BatchNormalization(axis=-1)(discX)
 
         labelInput = keras.Input(shape=(self.nClasses,), name = 'discinput_label')
         discX = layers.concatenate([discX, labelInput])
@@ -161,9 +156,6 @@ class CGAN_CIFAR_10(Augmentator):
         discLossHist = []
         genLossHist = []
 
-        #infoFile = open(self.basePath + '/info.txt', 'w')
-        #infoFile.close()
-
         #noise e labels de benchmark
         benchNoise = np.random.uniform(-1,1, size=(256,self.noiseDim))
         benchLabels = np.random.randint(0,self.nClasses, size = (256))
@@ -178,8 +170,7 @@ class CGAN_CIFAR_10(Augmentator):
             for i in range(nBatches):
                 imgBatch = imgs[i*self.batchSize:(i+1)*self.batchSize]
                 labelBatch = lbls[i*self.batchSize:(i+1)*self.batchSize]
-
-                #imgBatch, labelBatch = dataset.getTrainData(i*self.batchSize,(i+1)*self.batchSize)
+                
                 genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                 labelInput = np.random.randint(0,self.nClasses, size = (self.batchSize))
                 labelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in labelInput], dtype='float32')
@@ -227,7 +218,7 @@ class CGAN_CIFAR_10(Augmentator):
     #Gera e salva imagens
     def saveGenerationExample(self, nEntries = 20):
         noise = np.random.uniform(-1,1, size=(self.nClasses,self.noiseDim))
-        labels = np.array([[1 if i == j else 0 for i in range(self.nClasses)] for j in range(self.nClasses)], dtype='float32')
+        labels = np.array([[1 if i == j else -1 for i in range(self.nClasses)] for j in range(self.nClasses)], dtype='float32')
         images = self.generator.predict([noise, labels])
         out = ((images * 127.5) + 127.5).astype('uint8')
         showOutputAsImg(out, self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a.argmax()) for a in labels]) + '.png',self.nClasses, colored=True)

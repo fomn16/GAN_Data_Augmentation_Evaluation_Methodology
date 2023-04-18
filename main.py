@@ -25,9 +25,9 @@ for dataset in datasets:
         dataset.loadParams()
 
         augmentators : List[Augmentator] = []
-        augmentators.append(getAugmentator(Augmentators.CGAN, params))
+        #augmentators.append(getAugmentator(Augmentators.CGAN, params))
         #augmentators.append(getAugmentator(Augmentators.DIRECT, params))
-        #augmentators.append(getAugmentator(Augmentators.GAN, params))
+        augmentators.append(getAugmentator(Augmentators.GAN, params))
         #augmentators.append(getAugmentator(Augmentators.MIXED, params, [augmentators, {0,1}]))
 
         #cria testes

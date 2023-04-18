@@ -77,14 +77,15 @@ class CGAN_MNIST(Augmentator):
         discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
 
         # segunda camada convolucional.
-        discX = layers.Conv2D(filters=64, kernel_size=(5,5), padding='same', strides=(2,2))(discX)
-        discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
+        discX = layers.Conv2D(filters=64, kernel_size=(5,5), padding='same', strides=(2,2), activation = "tanh")(discX)
         discX = layers.MaxPool2D(pool_size=(3,3), strides=(2,2), padding='valid')(discX)
+
         # camada densa
         discX = layers.Flatten()(discX)
         discX = layers.Dropout(0.2)(discX)
 
         labelInput = keras.Input(shape=(self.nClasses,), name = 'discinput_label')
+
         discX = layers.concatenate([discX, labelInput])
         discX = layers.Dense(self.discFCOutputDim)(discX)
         discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
@@ -132,7 +133,7 @@ class CGAN_MNIST(Augmentator):
         for i in range(20):
             benchLabels[i] = int(i/2)
 
-        benchLabels = np.array([[1 if i == bl else 0 for i in range(self.nClasses)] for bl in benchLabels], dtype='float32')
+        benchLabels = np.array([[1 if i == bl else -1 for i in range(self.nClasses)] for bl in benchLabels], dtype='float32')
 
         imgs, lbls = dataset.getAllTrainData()
         for epoch in range(self.ganEpochs):
@@ -143,7 +144,7 @@ class CGAN_MNIST(Augmentator):
                 #imgBatch, labelBatch = dataset.getTrainData(i*self.batchSize,(i+1)*self.batchSize)
                 genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                 labelInput = np.random.randint(0,self.nClasses, size = (self.batchSize))
-                labelInput = np.array([[1 if i == li else 0 for i in range(self.nClasses)] for li in labelInput], dtype='float32')
+                labelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in labelInput], dtype='float32')
                 genImgOutput = self.generator.predict([genInput, labelInput], verbose=0)
 
                 XImg = np.concatenate((imgBatch, genImgOutput))
@@ -156,7 +157,7 @@ class CGAN_MNIST(Augmentator):
                 
                 genTrainNoise = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                 genTrainClasses = np.random.randint(0,self.nClasses, size = (self.batchSize))
-                genTrainClasses = np.array([[1 if i == c else 0 for i in range(self.nClasses)] for c in genTrainClasses], dtype='float32')
+                genTrainClasses = np.array([[1 if i == c else -1 for i in range(self.nClasses)] for c in genTrainClasses], dtype='float32')
                 gentrainLbls = [1]*self.batchSize 
                 gentrainLbls = np.reshape(gentrainLbls, (-1,))
                 ganLoss = self.gan.train_on_batch([genTrainNoise, genTrainClasses],gentrainLbls)
@@ -185,7 +186,7 @@ class CGAN_MNIST(Augmentator):
     #Gera e salva imagens
     def saveGenerationExample(self, nEntries = 20):
         noise = np.random.uniform(-1,1, size=(self.nClasses,self.noiseDim))
-        labels = np.array([[1 if i == j else 0 for i in range(self.nClasses)] for j in range(self.nClasses)], dtype='float32')
+        labels = np.array([[1 if i == j else -1 for i in range(self.nClasses)] for j in range(self.nClasses)], dtype='float32')
         images = self.generator.predict([noise, labels])
         out = ((images * 127.5) + 127.5).astype('uint8')
         showOutputAsImg(out, self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a.argmax()) for a in labels]) + '.png',self.nClasses)
@@ -194,7 +195,7 @@ class CGAN_MNIST(Augmentator):
         print(self.name + ": started data generation")
         genInput = np.random.uniform(-1,1,size=(nEntries,self.noiseDim))
         genLabelInput = np.random.randint(0,self.nClasses, size = (nEntries))
-        genLabelInput = np.array([[1 if i == li else 0 for i in range(self.nClasses)] for li in genLabelInput], dtype='float32')
+        genLabelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in genLabelInput], dtype='float32')
         genImages = self.generator.predict([genInput, genLabelInput])
         print(self.name + ": finished data generation")
         return genImages, genLabelInput

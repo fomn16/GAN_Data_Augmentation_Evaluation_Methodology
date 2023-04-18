@@ -48,7 +48,7 @@ class GAN_MNIST(Augmentator):
         # das camadas convolucionais
         genX = layers.Dense(units=self.genWidth*self.genHeight*self.genDepth, activation='relu')(genX)
         genX = layers.BatchNormalization()(genX)
-        labelOutput = layers.Dense(self.nClasses, activation='sigmoid', name='genoutput_label')(genX)
+        labelOutput = layers.Dense(self.nClasses, activation='tanh', name='genoutput_label')(genX)
 
         # Faz reshape para dimensões espaciais desejadas
         genX = layers.Reshape((self.genWidth, self.genHeight, self.genDepth))(genX)
@@ -76,8 +76,7 @@ class GAN_MNIST(Augmentator):
         discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
 
         # segunda camada convolucional.
-        discX = layers.Conv2D(filters=64, kernel_size=(5,5), padding='same', strides=(2,2))(discX)
-        discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
+        discX = layers.Conv2D(filters=64, kernel_size=(5,5), padding='same', strides=(2,2), activation="tanh")(discX)
         discX = layers.MaxPool2D(pool_size=(3,3), strides=(2,2), padding='valid')(discX)
         # camada densa
         discX = layers.Flatten()(discX)

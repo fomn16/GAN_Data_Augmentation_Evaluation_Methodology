@@ -10,12 +10,14 @@ class CGAN_CIFAR_10(Augmentator):
 
     noiseDim = 100
     genFCOutputDim = 1024
-
-    leakyReluAlpha = 0.2
     discFCOutputDim = 2048
 
-    initLr = 2e-4
-    ganEpochs = 50
+    initLr = 2e-3
+    leakyReluAlpha = 0.2
+    l2RegParam = 0.01
+    dropoutParam = 0.05
+
+    ganEpochs = 500
     batchSize = 128
 
     generator = None
@@ -35,6 +37,29 @@ class CGAN_CIFAR_10(Augmentator):
 
         self.params = params
 
+
+    def AddBlock(self, inModel, nLayers: int, outDepth: int):
+        for i in range(nLayers):
+            if i == 0:
+                model = layers.Conv2D(filters=outDepth, kernel_size=(3,3), padding='same', kernel_regularizer=regularizers.l2(self.l2RegParam))(inModel)
+            else:
+                 model = layers.Conv2D(filters=outDepth, kernel_size=(3,3), padding='same', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
+            model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
+            model = layers.BatchNormalization(axis=-1)(model)
+        model = layers.MaxPool2D(pool_size=(2,2), padding='valid', strides=(2,2))(model)
+        return model
+    
+    def AddBlockTranspose(self, inModel, nLayers: int, outDepth: int):
+        for i in range(nLayers):
+            if i == 0:
+                model = layers.Conv2DTranspose(filters=outDepth, kernel_size=(3,3), padding='same', strides=(2,2), kernel_regularizer=regularizers.l2(self.l2RegParam))(inModel)
+            else:
+                model = layers.Conv2DTranspose(filters=outDepth, kernel_size=(3,3), padding='same', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
+            model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
+            model = layers.Dropout(self.dropoutParam)(model)
+            model = layers.BatchNormalization(axis=-1)(model)
+        return model
+    
     #Cria model geradora com keras functional API
     def createGenModel(self):
         cgenNoiseInput = keras.Input(shape=(self.noiseDim,), name = 'genInput_randomDistribution')
@@ -42,43 +67,31 @@ class CGAN_CIFAR_10(Augmentator):
 
         cgenX = layers.concatenate([cgenNoiseInput, cgenLabelInput])
 
-        # cria camada de entrada, com noiseDim + nClasses entradas, saída de tamanho genFCOutputDim, e ativação relu
+        # cria camada de entrada, com noiseDim entradas, saída de tamanho sCOutputDim, e ativação relu
         # entrada -> tamanho escolhido
-        cgenX = layers.Dense(self.genFCOutputDim, activation='relu')(cgenX)
+        cgenX = layers.Dense(self.genFCOutputDim)(cgenX)
+        cgenX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(cgenX)
+        cgenX = layers.Dropout(self.dropoutParam)(cgenX)
+        cgenX = layers.BatchNormalization()(cgenX)
 
         # cria camada que converte saída da primeira camada para o número de nós necessário na entrada
         # das camadas convolucionais
-        cgenX = layers.Dense(units=self.genWidth*self.genHeight*self.genDepth, activation='relu')(cgenX)
+        cgenX = layers.Dense(units=self.genWidth*self.genHeight*self.genDepth)(cgenX)
+        cgenX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(cgenX)
+        cgenX = layers.Dropout(self.dropoutParam)(cgenX)
         cgenX = layers.BatchNormalization()(cgenX)
 
         # Faz reshape para dimensões espaciais desejadas
         cgenX = layers.Reshape((self.genWidth, self.genHeight, self.genDepth))(cgenX)
-        cgenX = layers.Dropout(0.5)(cgenX)
 
-        # convolução transposta (genWidth,genHeight,genDepth =/ strides)
-        cgenX = layers.Conv2DTranspose(filters=128, kernel_size=(3,3), strides=(2,2), padding='same', activation='relu')(cgenX)
-        cgenX = layers.BatchNormalization(axis=-1)(cgenX)
+        model = self.AddBlockTranspose(cgenX, 1, 128)
 
-        # convolução transposta (genWidth,genHeight,genDepth =/ strides)
-        cgenX = layers.Conv2DTranspose(filters=64, kernel_size=(5,5), strides=(2,2), padding='same', activation='relu')(cgenX)
+        model = self.AddBlockTranspose(model, 1, 128)
 
-        # convolução transposta (genWidth,genHeight,genDepth =/ strides)
-        cgenX = layers.Conv2DTranspose(filters=32, kernel_size=(5,5), strides=(2,2), padding='same', activation='relu')(cgenX)
-        cgenX = layers.BatchNormalization(axis=-1)(cgenX)
+        model = self.AddBlockTranspose(model, 2, 128)
 
-        # convolução transposta (genWidth,genHeight,genDepth =/ strides)
-        cgenX = layers.Conv2DTranspose(filters=16, kernel_size=(5,5), strides=(2,2), padding='same', activation='relu')(cgenX)
-
-        # convolução transposta (genWidth,genHeight,genDepth =/ strides)
-        cgenX = layers.Conv2DTranspose(filters=8, kernel_size=(5,5), strides=(2,2), padding='same', activation='relu')(cgenX)
-        cgenX = layers.Dropout(0.5)(cgenX)
+        cgenOutput = layers.Conv2D(filters=3, kernel_size=(3,3), padding='same', activation='tanh',  name = 'genOutput_img', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
         
-        cgenX = layers.MaxPool2D(pool_size=(8,8), padding='valid')(cgenX)
-
-        # camada convolucional que tem como output a imagem de saída
-        # tanh é usado pois é necessária saída de espaço limitado
-        cgenOutput = layers.Conv2DTranspose(filters=self.imgChannels, kernel_size=(7,7), strides=(2,2), padding='same', activation='tanh', name = 'genOutput_img')(cgenX)
-
         self.generator = keras.Model(inputs = [cgenNoiseInput, cgenLabelInput], outputs = cgenOutput, name = 'cgenerator')
 
         keras.utils.plot_model(
@@ -89,30 +102,26 @@ class CGAN_CIFAR_10(Augmentator):
     def createDiscModel(self):
         discInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'discinput_img')
 
-        discX = layers.Conv2D(filters=32, kernel_size=(7,7), padding='same', strides=(2,2))(discInput)
-        discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
+        discX = self.AddBlock(discInput, 1, 64)
+        discX = self.AddBlock(discX, 1, 128)
+        discX = self.AddBlock(discX, 1, 256)
+        #discX = self.AddBlock(discX, 1, 256)
 
-        discX = layers.Conv2D(filters=64, kernel_size=(5,5), padding='same', strides=(2,2))(discX)
-        discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
-
-        # primeira camada convolucional, recebe formato das imagens
-        discX = layers.Conv2D(filters=128, kernel_size=(5,5), padding='same', strides=(2,2))(discX)
-        discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
-
-        # primeira camada convolucional, recebe formato das imagens
-        discX = layers.Conv2D(filters=256, kernel_size=(3,3), padding='same', strides=(2,2))(discX)
-        discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
-
-        #discX = layers.MaxPool2D(pool_size=(2,2), padding='valid', strides=(2,2))(discX)
         # camada densa
         discX = layers.Flatten()(discX)
-        #discX = layers.Dropout(0.2)(discX)
+
+        discX = layers.Dense(self.discFCOutputDim)(discX)
+        discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
+        discX = layers.Dropout(self.dropoutParam)(discX)
+        discX = layers.BatchNormalization(axis=-1)(discX)
 
         labelInput = keras.Input(shape=(self.nClasses,), name = 'discinput_label')
         discX = layers.concatenate([discX, labelInput])
 
-        #discX = layers.Dense(self.discFCOutputDim)(discX)
-        #discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
+        discX = layers.Dense(self.discFCOutputDim)(discX)
+        discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
+        discX = layers.Dropout(self.dropoutParam)(discX)
+        discX = layers.BatchNormalization(axis=-1)(discX)
 
         # nó de output, sigmoid->mapear em 0 ou 1
         discOutput = layers.Dense(1, activation='sigmoid', name = 'discoutput_realvsfake')(discX)
@@ -125,7 +134,7 @@ class CGAN_CIFAR_10(Augmentator):
 
     #compilando discriminador e gan
     def compile(self):
-        optDiscr = Adam(learning_rate = self.initLr/2, beta_1 = 0.5)#, decay = self.initLr/self.ganEpochs)
+        optDiscr = Adam(learning_rate = self.initLr/2, beta_1 = 0.5)
         self.createDiscModel()
         self.discriminator.compile(loss='binary_crossentropy', optimizer=optDiscr)
 
@@ -136,13 +145,13 @@ class CGAN_CIFAR_10(Augmentator):
         cganOutput =  self.discriminator([self.generator([cganNoiseInput, cganLabelInput]), cganLabelInput])
         self.gan = Model((cganNoiseInput, cganLabelInput), cganOutput)
 
-        optcGan = Adam(learning_rate = self.initLr, beta_1=0.5)#, decay=self.initLr/self.ganEpochs)
-        self.gan.compile(loss= 'binary_crossentropy', optimizer=optcGan)
+        optcGan = Adam(learning_rate = self.initLr, beta_1=0.5)
+        self.gan.compile(loss='binary_crossentropy', optimizer=optcGan)
         
         keras.utils.plot_model(
             self.gan, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/gan.png')
         )
-
+        
     #treinamento GAN
     def train(self, dataset: Dataset):
         discLossHist = []
@@ -157,7 +166,7 @@ class CGAN_CIFAR_10(Augmentator):
         for i in range(20):
             benchLabels[i] = int(i/2)
 
-        benchLabels = np.array([[1 if i == bl else 0 for i in range(self.nClasses)] for bl in benchLabels], dtype='float32')
+        benchLabels = np.array([[1 if i == bl else -1 for i in range(self.nClasses)] for bl in benchLabels], dtype='float32')
 
         imgs, lbls = dataset.getAllTrainData()
         for epoch in range(self.ganEpochs):
@@ -165,14 +174,17 @@ class CGAN_CIFAR_10(Augmentator):
             for i in range(nBatches):
                 imgBatch = imgs[i*self.batchSize:(i+1)*self.batchSize]
                 labelBatch = lbls[i*self.batchSize:(i+1)*self.batchSize]
+
                 #imgBatch, labelBatch = dataset.getTrainData(i*self.batchSize,(i+1)*self.batchSize)
                 genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                 labelInput = np.random.randint(0,self.nClasses, size = (self.batchSize))
-                labelInput = np.array([[1 if i == li else 0 for i in range(self.nClasses)] for li in labelInput], dtype='float32')
+                labelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in labelInput], dtype='float32')
+                
                 genImgOutput = self.generator.predict([genInput, labelInput], verbose=0)
 
                 XImg = np.concatenate((imgBatch, genImgOutput))
                 XLabel = np.concatenate((labelBatch, labelInput))
+
                 y = ([1] * self.batchSize) + ([0] * self.batchSize)
                 y = np.reshape(y, (-1,))
                 (XImg, XLabel, y) = shuffle(XImg, XLabel, y)
@@ -181,7 +193,8 @@ class CGAN_CIFAR_10(Augmentator):
                 
                 genTrainNoise = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                 genTrainClasses = np.random.randint(0,self.nClasses, size = (self.batchSize))
-                genTrainClasses = np.array([[1 if i == c else 0 for i in range(self.nClasses)] for c in genTrainClasses], dtype='float32')
+                genTrainClasses = np.array([[1 if i == c else -1 for i in range(self.nClasses)] for c in genTrainClasses], dtype='float32')
+
                 gentrainLbls = [1]*self.batchSize 
                 gentrainLbls = np.reshape(gentrainLbls, (-1,))
                 ganLoss = self.gan.train_on_batch([genTrainNoise, genTrainClasses],gentrainLbls)
@@ -219,7 +232,7 @@ class CGAN_CIFAR_10(Augmentator):
         print(self.name + ": started data generation")
         genInput = np.random.uniform(-1,1,size=(nEntries,self.noiseDim))
         genLabelInput = np.random.randint(0,self.nClasses, size = (nEntries))
-        genLabelInput = np.array([[1 if i == li else 0 for i in range(self.nClasses)] for li in genLabelInput], dtype='float32')
+        genLabelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in genLabelInput], dtype='float32')
         genImages = self.generator.predict([genInput, genLabelInput])
         print(self.name + ": finished data generation")
         return genImages, genLabelInput

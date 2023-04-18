@@ -11,6 +11,7 @@ import PIL.Image
 from tensorflow import keras
 from tensorflow.keras import layers
 from keras.layers import Input
+from keras import regularizers
 import matplotlib.pyplot as plt
 import random
 import tensorflow_datasets as tfds
@@ -19,7 +20,7 @@ import os
 import itertools
 from typing import List
 from datetime import datetime
-
+import tensorflow as tf
 import sys
 sys.path.insert(1, '../../')
 
@@ -43,8 +44,10 @@ def concatArray(a, n, colored):
     return d
 
 #mostrar input/output
-def showOutputAsImg(out, path, n = 20, colored = False):
-  PIL.Image.fromarray(concatArray(out,n, colored)).resize(size=(100*n,100)).save(path)
+def showOutputAsImg(out, path, n = 20, colored = False, mult = 10):
+  w = out.shape[1]*mult
+  h = out.shape[2]*mult
+  PIL.Image.fromarray(concatArray(out,n, colored)).resize(size=(w*n,h)).save(path)
 
 def plotLoss(losses, path, clear=True):
     if(clear):
@@ -79,7 +82,7 @@ def loadIntoArrayLL(datasetSection, dataset, nClasses, start, end, imgId, lblId)
      # create empty arrays for images and labels
     output_shapes = next(dataset[datasetSection].as_numpy_iterator())[imgId].shape
     imgs = np.zeros((end - start,) + output_shapes).astype('float')
-    lbls = np.zeros((end - start, nClasses)).astype('int')
+    lbls = np.full((end - start, nClasses), -1).astype('int')
     
     # load data into arrays
     iterator = dataset[datasetSection].as_numpy_iterator()

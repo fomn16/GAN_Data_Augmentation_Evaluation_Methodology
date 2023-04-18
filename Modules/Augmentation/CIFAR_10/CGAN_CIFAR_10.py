@@ -12,7 +12,7 @@ class CGAN_CIFAR_10(Augmentator):
     genFCOutputDim = 1024
     discFCOutputDim = 2048
 
-    initLr = 2e-3
+    initLr = 2e-4
     leakyReluAlpha = 0.2
     l2RegParam = 0.01
     dropoutParam = 0.05
@@ -45,6 +45,7 @@ class CGAN_CIFAR_10(Augmentator):
             else:
                  model = layers.Conv2D(filters=outDepth, kernel_size=(3,3), padding='same', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
             model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
+            model = layers.Dropout(self.dropoutParam)(model)
             model = layers.BatchNormalization(axis=-1)(model)
         model = layers.MaxPool2D(pool_size=(2,2), padding='valid', strides=(2,2))(model)
         return model
@@ -88,7 +89,7 @@ class CGAN_CIFAR_10(Augmentator):
 
         model = self.AddBlockTranspose(model, 1, 128)
 
-        model = self.AddBlockTranspose(model, 2, 128)
+        model = self.AddBlockTranspose(model, 1, 128)
 
         cgenOutput = layers.Conv2D(filters=3, kernel_size=(3,3), padding='same', activation='tanh',  name = 'genOutput_img', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
         
@@ -105,7 +106,7 @@ class CGAN_CIFAR_10(Augmentator):
         discX = self.AddBlock(discInput, 1, 64)
         discX = self.AddBlock(discX, 1, 128)
         discX = self.AddBlock(discX, 1, 256)
-        #discX = self.AddBlock(discX, 1, 256)
+        discX = self.AddBlock(discX, 1, 256)
 
         # camada densa
         discX = layers.Flatten()(discX)

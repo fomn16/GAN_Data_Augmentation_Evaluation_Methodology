@@ -12,6 +12,8 @@ from Modules.Augmentation.CIFAR_10.CGAN_CIFAR_10 import CGAN_CIFAR_10
 from Modules.Augmentation.MNIST.GAN_MNIST import GAN_MNIST
 from Modules.Augmentation.CIFAR_10.GAN_CIFAR_10 import GAN_CIFAR_10
 
+from Modules.Augmentation.SOP.GAN_SOP import GAN_SOP
+
 from Modules.Augmentation.DATASET_DIRECTLY import DATASET_DIRECTLY
 from Modules.Augmentation.MIXED import MIXED
 
@@ -36,6 +38,8 @@ def getAugmentator(augmentator, params:Params, extraParams = None, nameComplemen
             return GAN_MNIST(params, extraParams, nameComplement)
         if(params.datasetName == Datasets.CIFAR_10):
             return GAN_CIFAR_10(params, extraParams, nameComplement)
+        if(params.datasetName == Datasets.STANFORD_ONLINE):
+            return GAN_SOP(params, extraParams, nameComplement)
     elif(augmentator == Augmentators.CGAN):
         if(params.datasetName == Datasets.MNIST):
             return CGAN_MNIST(params, extraParams, nameComplement)
@@ -53,6 +57,8 @@ def getBenchmark(benchmark, params: Params, nameComplement = "") -> Benchmark:
             return Classifier_MNIST(params)
         if(params.datasetName == Datasets.CIFAR_10):
             return Classifier_MNIST(params, "_CIFAR")
+        if(params.datasetName == Datasets.STANFORD_ONLINE):
+            return Classifier_MNIST(params, "_SOP")
     elif(benchmark == Benchmarks.TSNE_INCEPTION):
             return TSNE_INCEPTION(params)
     return None

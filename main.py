@@ -2,6 +2,7 @@ from Modules.Shared.helper import *
 from Modules.Shared.config import *
 from Modules.Datasets.MNIST import MNIST
 from Modules.Datasets.CIFAR_10 import CIFAR_10
+from Modules.Datasets.SOP import STANFORD_ONLINE_PRODUCTS
 
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
@@ -16,8 +17,9 @@ params.currentFold = 0
 params.runtime = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
 
 datasets : List[Dataset] = []
-datasets.append(CIFAR_10(params))
+#datasets.append(CIFAR_10(params))
 #datasets.append(MNIST(params))
+datasets.append(STANFORD_ONLINE_PRODUCTS(params))
 
 for dataset in datasets:
     for fold in range(params.kFold):

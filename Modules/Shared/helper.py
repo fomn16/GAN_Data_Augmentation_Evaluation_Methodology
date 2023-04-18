@@ -78,14 +78,21 @@ def loadIntoArray(dataset, nClasses):
     return imgs, lbls
 
 #fazendo uso de lazy loading do dataset
-def loadIntoArrayLL(datasetSection, dataset, nClasses, start, end, imgId, lblId):
-     # create empty arrays for images and labels
-    output_shapes = next(dataset[datasetSection].as_numpy_iterator())[imgId].shape
+def loadIntoArrayLL(datasetSection, dataset, nClasses, start, end, imgId, lblId, mapFunction = None):
+    # create empty arrays for images and labels
+    output_shapes = None
+    iterator = None
+
+    if(mapFunction == None):
+        output_shapes = next(dataset[datasetSection].as_numpy_iterator())[imgId].shape
+        iterator = dataset[datasetSection].as_numpy_iterator()
+    else:
+        output_shapes = next(map(mapFunction, dataset[datasetSection].as_numpy_iterator()))[imgId].shape
+        iterator = map(mapFunction, dataset[datasetSection].as_numpy_iterator())
+        
     imgs = np.zeros((end - start,) + output_shapes).astype('float')
     lbls = np.full((end - start, nClasses), -1).astype('int')
     
-    # load data into arrays
-    iterator = dataset[datasetSection].as_numpy_iterator()
     for i, instance in enumerate(itertools.islice(iterator, start, end)):
         img = instance[imgId]
         label = instance[lblId]

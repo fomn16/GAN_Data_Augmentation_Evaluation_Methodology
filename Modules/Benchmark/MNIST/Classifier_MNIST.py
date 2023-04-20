@@ -47,7 +47,7 @@ class Classifier_MNIST(Benchmark):
         classX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(classX)
 
         # camada de output, chassificador one hot
-        classOutput = layers.Dense(self.nClasses, activation='sigmoid', name='genOutput_label')(classX)
+        classOutput = layers.Dense(self.nClasses, activation='tanh', name='genOutput_label')(classX)
 
         self.classifier = keras.Model(inputs = classInput, outputs = classOutput, name = 'classifier')
 

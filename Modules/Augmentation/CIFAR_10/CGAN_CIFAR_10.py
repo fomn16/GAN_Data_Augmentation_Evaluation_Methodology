@@ -18,7 +18,7 @@ class CGAN_CIFAR_10(Augmentator):
     dropoutParam = 0.05
 
     ganEpochs = 500
-    batchSize = 128
+    batchSize = 64
 
     generator = None
     discriminator = None
@@ -54,7 +54,7 @@ class CGAN_CIFAR_10(Augmentator):
             if i == 0:
                 model = layers.Conv2DTranspose(filters=outDepth, kernel_size=(3,3), padding='same', strides=(2,2), kernel_regularizer=regularizers.l2(self.l2RegParam))(inModel)
             else:
-                model = layers.Conv2DTranspose(filters=outDepth, kernel_size=(3,3), padding='same', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
+                model = layers.Conv2D(filters=outDepth, kernel_size=(3,3), padding='same', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
             model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
             model = layers.Dropout(self.dropoutParam)(model)
         return model
@@ -71,13 +71,14 @@ class CGAN_CIFAR_10(Augmentator):
         cgenX = layers.Dense(self.genFCOutputDim)(cgenX)
         cgenX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(cgenX)
         cgenX = layers.Dropout(self.dropoutParam)(cgenX)
+        #cgenX = layers.BatchNormalization()(cgenX)
 
         # cria camada que converte saída da primeira camada para o número de nós necessário na entrada
         # das camadas convolucionais
         cgenX = layers.Dense(units=self.genWidth*self.genHeight*self.genDepth)(cgenX)
         cgenX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(cgenX)
         cgenX = layers.Dropout(self.dropoutParam)(cgenX)
-        cgenX = layers.BatchNormalization()(cgenX)
+        #cgenX = layers.BatchNormalization()(cgenX)
 
         # Faz reshape para dimensões espaciais desejadas
         cgenX = layers.Reshape((self.genWidth, self.genHeight, self.genDepth))(cgenX)
@@ -87,8 +88,6 @@ class CGAN_CIFAR_10(Augmentator):
         model = self.AddBlockTranspose(model, 1, 128)
 
         model = self.AddBlockTranspose(model, 1, 128)
-
-        model = layers.BatchNormalization()(model)
 
         cgenOutput = layers.Conv2D(filters=3, kernel_size=(3,3), padding='same', activation='tanh',  name = 'genOutput_img', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
         
@@ -106,13 +105,14 @@ class CGAN_CIFAR_10(Augmentator):
         discX = self.AddBlock(discX, 1, 128)
         discX = self.AddBlock(discX, 1, 256)
         discX = self.AddBlock(discX, 1, 256)
-        discX = layers.BatchNormalization(axis=-1)(discX)
+        #discX = layers.BatchNormalization(axis=-1)(discX)
 
         # camada densa
         discX = layers.Flatten()(discX)
 
-        discX = layers.Dense(self.discFCOutputDim, activation="tanh")(discX)
+        discX = layers.Dense(self.discFCOutputDim, activation='tanh')(discX)
         discX = layers.Dropout(self.dropoutParam)(discX)
+        #discX = layers.BatchNormalization(axis=-1)(discX)
 
         labelInput = keras.Input(shape=(self.nClasses,), name = 'discinput_label')
         discX = layers.concatenate([discX, labelInput])
@@ -120,7 +120,7 @@ class CGAN_CIFAR_10(Augmentator):
         discX = layers.Dense(self.discFCOutputDim)(discX)
         discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
         discX = layers.Dropout(self.dropoutParam)(discX)
-        discX = layers.BatchNormalization(axis=-1)(discX)
+        #discX = layers.BatchNormalization(axis=-1)(discX)
 
         # nó de output, sigmoid->mapear em 0 ou 1
         discOutput = layers.Dense(1, activation='sigmoid', name = 'discoutput_realvsfake')(discX)

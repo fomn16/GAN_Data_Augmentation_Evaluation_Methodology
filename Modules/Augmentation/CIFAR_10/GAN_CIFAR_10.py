@@ -18,7 +18,7 @@ class GAN_CIFAR_10(Augmentator):
     dropoutParam = 0.05
 
     ganEpochs = 500
-    batchSize = 128
+    batchSize = 64
 
     generator = None
     discriminator = None
@@ -85,8 +85,6 @@ class GAN_CIFAR_10(Augmentator):
 
         model = self.AddBlockTranspose(model, 1, 128)
 
-        model = layers.BatchNormalization()(model)
-
         # camada convolucional que tem como output a imagem de saída
         # tanh é usado pois é necessária saída de espaço limitado
         genOutput = layers.Conv2D(filters=3, kernel_size=(3,3), padding='same', activation='tanh',  name = 'genOutput_img', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
@@ -119,7 +117,7 @@ class GAN_CIFAR_10(Augmentator):
         discX = layers.Dense(self.discFCOutputDim)(discX)
         discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
         discX = layers.Dropout(self.dropoutParam)(discX)
-        discX = layers.BatchNormalization(axis=-1)(discX)
+        #discX = layers.BatchNormalization(axis=-1)(discX)
 
         # nó de output, sigmoid->mapear em 0 ou 1
         discOutput = layers.Dense(1, activation='sigmoid', name = 'discoutput_realvsfake')(discX)

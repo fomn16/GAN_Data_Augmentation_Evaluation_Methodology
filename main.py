@@ -17,8 +17,8 @@ params.currentFold = 0
 params.runtime = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
 
 datasets : List[Dataset] = []
-#datasets.append(CIFAR_10(params))
 #datasets.append(MNIST(params))
+#datasets.append(CIFAR_10(params))
 datasets.append(STANFORD_ONLINE_PRODUCTS(params))
 
 for dataset in datasets:
@@ -27,10 +27,10 @@ for dataset in datasets:
         dataset.loadParams()
 
         augmentators : List[Augmentator] = []
-        #augmentators.append(getAugmentator(Augmentators.CGAN, params))
         #augmentators.append(getAugmentator(Augmentators.DIRECT, params))
         augmentators.append(getAugmentator(Augmentators.GAN, params))
-        #augmentators.append(getAugmentator(Augmentators.MIXED, params, [augmentators, {0,1}]))
+        #augmentators.append(getAugmentator(Augmentators.CGAN, params))
+        #augmentators.append(getAugmentator(Augmentators.MIXED, params, [augmentators, {0,2}]))
 
         #cria testes
         benchmarks : List[Benchmark] = []
@@ -51,7 +51,6 @@ for dataset in datasets:
                     if(benchmark != None):
                         benchmark.train(augmentator, dataset)
                         benchmark.runTest(dataset)
-
 
 '''
 gen.save(verifiedFolder('modelSaves/' + datasetName + '/gen/fold_' + str(currentFold)))

@@ -12,7 +12,7 @@ class GAN_SOP(Augmentator):
     genFCOutputDim = 1024
     discFCOutputDim = 2048
 
-    initLr = 2e-4
+    initLr = 2e-3
     leakyReluAlpha = 0.2
     l2RegParam = 0.01
     dropoutParam = 0.05
@@ -83,15 +83,11 @@ class GAN_SOP(Augmentator):
 
         model = self.AddBlockTranspose(model, 1, 256)
 
-        model = layers.BatchNormalization()(model)
-
         model = self.AddBlockTranspose(model, 1, 128)
 
         model = self.AddBlockTranspose(model, 1, 128)
 
         model = self.AddBlockTranspose(model, 1, 64)
-
-        model = layers.BatchNormalization()(model)
 
         # camada convolucional que tem como output a imagem de saída
         # tanh é usado pois é necessária saída de espaço limitado
@@ -110,11 +106,9 @@ class GAN_SOP(Augmentator):
         discX = self.AddBlock(discInput, 1, 64)
         discX = self.AddBlock(discX, 1, 128)
         discX = self.AddBlock(discX, 1, 128)
-        discX = layers.BatchNormalization(axis=-1)(discX)
         discX = self.AddBlock(discX, 1, 256)
         discX = self.AddBlock(discX, 1, 256)
         discX = self.AddBlock(discX, 1, 512)
-        discX = layers.BatchNormalization(axis=-1)(discX)
 
         # camada densa
         discX = layers.Flatten()(discX)
@@ -127,8 +121,8 @@ class GAN_SOP(Augmentator):
 
         discX = layers.Dense(self.discFCOutputDim)(discX)
         discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
-        discX = layers.Dropout(self.dropoutParam)(discX)
         discX = layers.BatchNormalization(axis=-1)(discX)
+        discX = layers.Dropout(self.dropoutParam)(discX)
 
         # nó de output, sigmoid->mapear em 0 ou 1
         discOutput = layers.Dense(1, activation='sigmoid', name = 'discoutput_realvsfake')(discX)
@@ -168,8 +162,9 @@ class GAN_SOP(Augmentator):
         for epoch in range(self.ganEpochs):
             nBatches = int(dataset.trainInstances/self.batchSize)
             for i in range(nBatches):
+                print("\r", end="")
+                print(('%.2f' % (i*100/nBatches)) + "%", end="")
                 imgBatch, labelBatch = dataset.getTrainData(i*self.batchSize, (i+1)*self.batchSize)
-
                 genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                 genImgOutput, genLabelOutput = self.generator.predict(genInput, verbose=0)
 
@@ -195,7 +190,7 @@ class GAN_SOP(Augmentator):
 
                     images, labels = self.generator.predict(benchNoise)
                     out = ((images * 127.5) + 127.5).astype('uint8')
-                    showOutputAsImg(out, self.basePath + '/output_f' + str(self.currentFold) + '_e' + str(epoch) + '_' + '_'.join([str(a.argmax()) for a in labels[:20]]) + '.png', colored=True)
+                    showOutputAsImg(out, self.basePath + '/output_f' + str(self.currentFold) + '_e' + str(epoch) + '_' + '_'.join([str(a.argmax()) for a in labels[:20]]) + '.png', colored=True, mult=1)
                     plotLoss([[genLossHist, 'generator loss'],[discLossHist, 'discriminator loss']], self.basePath + '/trainPlot.png')
             if(epoch%5 == 0 or epoch == self.ganEpochs-1):
                 epochPath = self.basePath + '/modelSaves/fold_' + str(self.currentFold) + '/epoch_' + str(epoch)

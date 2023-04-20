@@ -101,3 +101,48 @@ def loadIntoArrayLL(datasetSection, dataset, nClasses, start, end, imgId, lblId,
         imgs[i] = img
         lbls[i, label] = 1
     return imgs, lbls
+
+#recupera o bloco do dataset considerando que os splits de treinamento e teste são juntos
+def getBlockFromDataset(start, end, trainInstancesDataset, nClasses, dataset, mapFunction, imgId, lblId):
+    imgs = None
+    lbls = None
+    #se todo o bloco a ser recuperado se encontra no split de treinamento do dataset
+    if(end < trainInstancesDataset):
+        imgs, lbls = loadIntoArrayLL('train', dataset, nClasses, start, end, imgId, lblId, mapFunction)
+    #se todo o bloco a ser recuperado se encontra no split de teste do dataset    
+    elif (start >= trainInstancesDataset):
+        imgs, lbls = loadIntoArrayLL('test', dataset, nClasses, start - trainInstancesDataset, end - trainInstancesDataset, imgId, lblId, mapFunction)
+    #se uma parte deve vir do split train e outra parte do test
+    else:
+        imgs1, lbls1 = loadIntoArrayLL('train', dataset, nClasses, start, trainInstancesDataset - 1, imgId, lblId, mapFunction)
+        imgs2, lbls2 = loadIntoArrayLL('test', dataset, nClasses, 0, end - trainInstancesDataset, imgId, lblId, mapFunction)
+        imgs = np.concatenate((imgs1, imgs2))
+        lbls = np.concatenate((lbls1, lbls2))
+        del imgs1, imgs2, lbls1, lbls2
+    return imgs, lbls
+
+#carrega instancias do dataset usando lazy loading dos dados
+def getFromDatasetLL(start, end, currentFold, n_instances_fold_train, testInstances, trainInstancesDataset, nClasses, dataset, imgId, lblId, mapFunction = None, test=False):
+    imgs = None
+    lbls = None
+    testStart = currentFold*n_instances_fold_train
+    testEnd = testStart + testInstances
+    #para split de teste, desloca os índices pedidos para a área de inicio do split pedido, de acordo com o fold
+    if(test):
+        imgs, lbls = getBlockFromDataset(start + testStart, end + testStart, trainInstancesDataset, nClasses, dataset, mapFunction, imgId, lblId)
+    #para split de treinamento
+    else:
+        #se a porção de treinamento consultada só requer dados antes da parte de testes do dataset
+        if(end < testStart):
+            imgs, lbls = getBlockFromDataset(start, end, trainInstancesDataset, nClasses, dataset, mapFunction, imgId, lblId)
+        #se a porção de treinamento consultada só requer dados depois da parte de testes do dataset
+        elif(start >= testStart):
+            imgs, lbls = getBlockFromDataset(start + testInstances, end + testInstances, trainInstancesDataset, nClasses, dataset, mapFunction, imgId, lblId)
+        #se a porção de treinamento consultada precisa de dados de antes e depois da parte de testes
+        else:
+            imgs, lbls = getBlockFromDataset(start, testStart - 1, trainInstancesDataset, nClasses, dataset, mapFunction, imgId, lblId)
+            imgs2, lbls2 = getBlockFromDataset(testEnd, end + testInstances, trainInstancesDataset, nClasses, dataset, mapFunction, imgId, lblId)
+            imgs = np.concatenate((imgs, imgs2))
+            lbls = np.concatenate((lbls, lbls2))
+            del imgs2, lbls2
+    return imgs, lbls

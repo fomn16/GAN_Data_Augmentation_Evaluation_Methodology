@@ -18,11 +18,15 @@ class DATASET_DIRECTLY(Augmentator):
 
     #Gera e salva imagens
     def saveGenerationExample(self, nEntries = 20):
-        start = np.random.randint(0, self.dataset.trainInstances - nEntries)
+        start = 0
+        if(nEntries != self.dataset.trainInstances):
+            start = np.random.randint(0, self.dataset.trainInstances - nEntries)
         images, labels = self.dataset.getTrainData(start, start+nEntries)
         out = ((images * 127.5) + 127.5).astype('uint8')
         showOutputAsImg(out, self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a.argmax()) for a in labels]) + '.png',nEntries, self.params.imgChannels == 3)
 
     def generate(self, nEntries):
-        start = np.random.randint(0, self.dataset.trainInstances - nEntries)
+        start = 0
+        if(nEntries != self.dataset.trainInstances):
+            start = np.random.randint(0, self.dataset.trainInstances - nEntries)
         return self.dataset.getTrainData(start, start+nEntries)

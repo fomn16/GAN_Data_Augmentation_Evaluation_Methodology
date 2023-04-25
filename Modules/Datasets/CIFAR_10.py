@@ -12,10 +12,25 @@ class CIFAR_10(Dataset):
         self.name = params.datasetName
         self.dataset, self.info = tfds.load(name = params.datasetName, with_info=True, data_dir=params.dataDir)
 
-        self.trainInstances = self.info.splits['train'].num_examples
-        self.testInstances = self.info.splits['test'].num_examples
-        self.totalInstances = self.trainInstances + self.testInstances
-        self.n_instances_fold = int(np.floor(self.totalInstances/self.params.kFold))
+        #numero de instancias nos splits de treinamento e teste no dataset original
+        self.trainInstancesDataset = self.info.splits['train'].num_examples
+        self.testInstancesDataset = self.info.splits['test'].num_examples
+        #número total de instâncias
+        self.totalInstances = self.trainInstancesDataset + self.testInstancesDataset
+        #número de instâncias em cada divisão do fold que vai para treinamento
+        self.n_instances_fold_train = int(np.floor(self.totalInstances/self.params.kFold))
+        #numero de instâncias de treinamento nesse fold
+        self.trainInstances = self.n_instances_fold_train*(self.params.kFold - 1)
+        #numero de instâncias de teste nesse fold
+        self.testInstances = self.totalInstances - self.trainInstances
+
+        self.trainDataset = getFromDatasetLL(0, self.trainInstances, params.currentFold, self.n_instances_fold_train,
+                                             self.testInstances, self.trainInstancesDataset, params.nClasses,
+                                             self.dataset, 'image', 'label')
+        
+        self.testDataset = getFromDatasetLL(0, self.testInstances, params.currentFold, self.n_instances_fold_train,
+                                             self.testInstances, self.trainInstancesDataset, params.nClasses,
+                                             self.dataset, 'image', 'label', test=True)
     
     def loadParams(self):
         self.params.datasetName = 'cifar10'
@@ -25,32 +40,9 @@ class CIFAR_10(Dataset):
         self.params.imgHeight = 32
     
     def getTrainData(self, start, end):
-        return self._getFromDatasetLL(start, end)
+        imgs, lbls = self.trainDataset
+        return imgs[start:end], lbls[start:end]
 
     def getTestData(self, start, end):
-        return self._getFromDatasetLL(start, end, True)
-    
-    def getAllTrainData(self):
-        return self._getFromDatasetLL(0, self.trainInstances-1)
-    
-    def getAllTestData(self):
-        return self._getFromDatasetLL(0, self.testInstances-1, True)
-    
-    #carrega instancias do dataset usando lazy loading dos dados
-    def _getFromDatasetLL(self, start, end, test=False):
-        if(test):
-            start += self.params.currentFold*self.n_instances_fold
-            end += self.params.currentFold*self.n_instances_fold
-        imgs = None
-        lbls = None
-        if(end < self.trainInstances):
-            imgs, lbls = loadIntoArrayLL('train', self.dataset, self.params.nClasses, start, end, 'image', 'label')
-        elif (start >= self.trainInstances):
-            imgs, lbls = loadIntoArrayLL('test', self.dataset, self.params.nClasses, start - self.trainInstances, end - self.trainInstances, 'image', 'label')
-        else:
-            imgs1, lbls1 = loadIntoArrayLL('train', self.dataset, self.params.nClasses, start, self.trainInstances - 1, 'image', 'label')
-            imgs2, lbls2 = loadIntoArrayLL('test', self.dataset, self.params.nClasses, 0, end - self.trainInstances, 'image', 'label')
-            imgs = np.concatenate((imgs1, imgs2))
-            lbls = np.concatenate((lbls1, lbls2))
-            del imgs1, imgs2, lbls1, lbls2
-        return imgs, lbls
+        imgs, lbls = self.testDataset
+        return imgs[start:end], lbls[start:end]

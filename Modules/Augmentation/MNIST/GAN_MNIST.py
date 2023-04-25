@@ -15,7 +15,6 @@ class GAN_MNIST(Augmentator):
 
     initLr = 2e-4
     ganEpochs = 25
-    classifierEpochs = 8
     batchSize = 128
 
     generator = None
@@ -121,15 +120,10 @@ class GAN_MNIST(Augmentator):
         genLossHist = []
         discLossHist = []
        
-        #infoFile = open(self.basePath + '/info.txt', 'w')
-        #infoFile.close()
-        imgs, lbls = dataset.getAllTrainData()
         for epoch in range(self.ganEpochs):
             nBatches = int(dataset.trainInstances/self.batchSize)
             for i in range(nBatches):
-                imgBatch = imgs[i*self.batchSize:(i+1)*self.batchSize]
-                labelBatch = lbls[i*self.batchSize:(i+1)*self.batchSize]
-                #imgBatch, labelBatch = dataset.getTrainData(i*self.batchSize,(i+1)*self.batchSize)
+                imgBatch, labelBatch = dataset.getTrainData(i*self.batchSize,(i+1)*self.batchSize)
                 genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                 genImgOutput, genLabelOutput = self.generator.predict(genInput, verbose=0)
 

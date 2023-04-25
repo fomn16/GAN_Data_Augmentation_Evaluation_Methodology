@@ -115,7 +115,7 @@ def getBlockFromDataset(start, end, trainInstancesDataset, nClasses, dataset, ma
     #se uma parte deve vir do split train e outra parte do test
     else:
         imgs1, lbls1 = loadIntoArrayLL('train', dataset, nClasses, start, trainInstancesDataset - 1, imgId, lblId, mapFunction)
-        imgs2, lbls2 = loadIntoArrayLL('test', dataset, nClasses, 0, end - trainInstancesDataset, imgId, lblId, mapFunction)
+        imgs2, lbls2 = loadIntoArrayLL('test', dataset, nClasses, 0, end - trainInstancesDataset + 1, imgId, lblId, mapFunction)
         imgs = np.concatenate((imgs1, imgs2))
         lbls = np.concatenate((lbls1, lbls2))
         del imgs1, imgs2, lbls1, lbls2

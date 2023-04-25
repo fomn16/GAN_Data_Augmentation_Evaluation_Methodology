@@ -7,18 +7,11 @@ class STANFORD_ONLINE_PRODUCTS(Dataset):
     def __init__(self, params:Params):
         self.params = params
         self.loadParams()
-    
-    def loadParams(self):
-        self.params.datasetName = 'stanford_online_products'
-        self.params.nClasses = 12
-        self.params.imgChannels = 3
-        self.params.imgWidth = 128
-        self.params.imgHeight = 128
 
         self.lastStart = None
         self.lastEnd = None
         self.lastQuery = None
-        self.maxBatchesInMemory = 150
+        self.maxBatchesInMemory = 250
         self.data = None
 
         self.name = self.params.datasetName
@@ -35,6 +28,13 @@ class STANFORD_ONLINE_PRODUCTS(Dataset):
         self.trainInstances = self.n_instances_fold_train*(self.params.kFold - 1)
         #numero de instâncias de teste nesse fold
         self.testInstances = self.totalInstances - self.trainInstances
+    
+    def loadParams(self):
+        self.params.datasetName = 'stanford_online_products'
+        self.params.nClasses = 12
+        self.params.imgChannels = 3
+        self.params.imgWidth = 64
+        self.params.imgHeight = 64
     
     def _getDataCache(self, start, end, test):
         if(self.lastStart is None or self.lastEnd is None or self.lastQuery != test or start < self.lastStart or end < self.lastStart or start > self.lastEnd or end > self.lastEnd):
@@ -59,16 +59,6 @@ class STANFORD_ONLINE_PRODUCTS(Dataset):
 
     def getTestData(self, start, end):
         return self._getDataCache(start, end, True)
-    
-    def getAllTrainData(self):
-        return getFromDatasetLL(0, self.trainInstances-1, self.params.currentFold, self.n_instances_fold_train, 
-                                self.testInstances, self.trainInstancesDataset, self.params.nClasses, self.dataset, 
-                                'image', 'super_class_id', self.resizeImg)
-    
-    def getAllTestData(self):
-        return getFromDatasetLL(0, self.testInstances-1, self.params.currentFold, self.n_instances_fold_train, 
-                                self.testInstances, self.trainInstancesDataset, self.params.nClasses, self.dataset, 
-                                'image', 'super_class_id', self.resizeImg, True)
     
     def resizeImg(self, entry):
         img = entry['image']

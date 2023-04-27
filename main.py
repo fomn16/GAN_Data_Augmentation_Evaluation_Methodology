@@ -21,15 +21,15 @@ datasets.append(MNIST(params))
 #datasets.append(CIFAR_10(params))
 #datasets.append(STANFORD_ONLINE_PRODUCTS(params))
 
-for fold in range(1):
+for fold in range(params.kFold):
     for dataset in datasets:
         params.currentFold = fold
         dataset.loadParams()
 
         augmentators : List[Augmentator] = []
+        augmentators.append(getAugmentator(Augmentators.CGAN, params))
         augmentators.append(getAugmentator(Augmentators.DIRECT, params))
         #augmentators.append(getAugmentator(Augmentators.GAN, params))
-        augmentators.append(getAugmentator(Augmentators.CGAN, params))
         #augmentators.append(getAugmentator(Augmentators.MIXED, params, [augmentators, {0,2}]))
 
         for augmentator in augmentators:

@@ -37,13 +37,10 @@ class CGAN_MNIST(Augmentator):
     #Cria model geradora com keras functional API
     def createGenModel(self):
         cgenNoiseInput = keras.Input(shape=(self.noiseDim,), name = 'genInput_randomDistribution')
-        cgenLabelInput = keras.Input(shape=(self.nClasses,), name = 'genInput_label')
-
-        cgenX = layers.concatenate([cgenNoiseInput, cgenLabelInput])
 
         # cria camada de entrada, com noiseDim entradas, saída de tamanho sCOutputDim, e ativação relu
         # entrada -> tamanho escolhido
-        cgenX = layers.Dense(self.genFCOutputDim, activation='relu')(cgenX)
+        cgenX = layers.Dense(self.genFCOutputDim, activation='relu')(cgenNoiseInput)
         cgenX = layers.BatchNormalization()(cgenX)
 
         # cria camada que converte saída da primeira camada para o número de nós necessário na entrada
@@ -53,6 +50,12 @@ class CGAN_MNIST(Augmentator):
 
         # Faz reshape para dimensões espaciais desejadas
         cgenX = layers.Reshape((self.genWidth, self.genHeight, self.genDepth))(cgenX)
+
+        #criando input de labels, passando por embedding no formato de menores dimensões espaciais do gerador, concatenando no eixo das dimenões não espaciais
+        cgenLabelInput = keras.Input(shape=(1,), name = 'genInput_label')
+        embeddedLabels= layers.Embedding(self.nClasses, self.genWidth*self.genHeight)(cgenLabelInput)
+        reshapedLabels = layers.Reshape((self.genWidth, self.genHeight, 1))(embeddedLabels)
+        cgenX = layers.concatenate([cgenX, reshapedLabels])
 
         # convolução transposta (genWidth,genHeight,genDepth =/ strides)
         cgenX = layers.Conv2DTranspose(filters=32, kernel_size=(5,5), strides=(2,2), padding='same', activation='relu')(cgenX)
@@ -72,8 +75,13 @@ class CGAN_MNIST(Augmentator):
     def createDiscModel(self):
         discInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'discinput_img')
 
+        labelInput = keras.Input(shape=(1,), name = 'discinput_label')
+        embeddedLabels = layers.Embedding(self.nClasses, self.imgWidth*self.imgHeight)(labelInput)
+        reshapedLabels = layers.Reshape((self.imgWidth, self.imgHeight, 1))(embeddedLabels)
+        discX = layers.concatenate([discInput, reshapedLabels])
+
         # primeira camada convolucional, recebe formato das imagens
-        discX = layers.Conv2D(filters=32, kernel_size=(5,5), padding='same', strides=(2,2))(discInput)
+        discX = layers.Conv2D(filters=32, kernel_size=(5,5), padding='same', strides=(2,2))(discX)
         discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
 
         # segunda camada convolucional.
@@ -83,10 +91,6 @@ class CGAN_MNIST(Augmentator):
         # camada densa
         discX = layers.Flatten()(discX)
         discX = layers.Dropout(0.2)(discX)
-
-        labelInput = keras.Input(shape=(self.nClasses,), name = 'discinput_label')
-
-        discX = layers.concatenate([discX, labelInput])
         discX = layers.Dense(self.discFCOutputDim)(discX)
         discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
 
@@ -108,7 +112,7 @@ class CGAN_MNIST(Augmentator):
         self.createGenModel()
         self.discriminator.trainable = False
         cganNoiseInput = Input(shape=(self.noiseDim,))
-        cganLabelInput = Input(shape=(self.nClasses,))
+        cganLabelInput = Input(shape=(1,))
         cganOutput =  self.discriminator([self.generator([cganNoiseInput, cganLabelInput]), cganLabelInput])
         self.gan = Model((cganNoiseInput, cganLabelInput), cganOutput)
 
@@ -133,15 +137,16 @@ class CGAN_MNIST(Augmentator):
         for i in range(20):
             benchLabels[i] = int(i/2)
 
-        benchLabels = np.array([[1 if i == bl else -1 for i in range(self.nClasses)] for bl in benchLabels], dtype='float32')
+        #benchLabels = np.array([[1 if i == bl else -1 for i in range(self.nClasses)] for bl in benchLabels], dtype='float32')
 
         for epoch in range(self.ganEpochs):
             nBatches = int(dataset.trainInstances/self.batchSize)
             for i in range(nBatches):
                 imgBatch, labelBatch = dataset.getTrainData(i*self.batchSize, (i+1)*self.batchSize)
+                labelBatch = [a.argmax() for a in labelBatch]
                 genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                 labelInput = np.random.randint(0,self.nClasses, size = (self.batchSize))
-                labelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in labelInput], dtype='float32')
+                #labelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in labelInput], dtype='float32')
                 genImgOutput = self.generator.predict([genInput, labelInput], verbose=0)
 
                 XImg = np.concatenate((imgBatch, genImgOutput))
@@ -154,7 +159,7 @@ class CGAN_MNIST(Augmentator):
                 
                 genTrainNoise = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                 genTrainClasses = np.random.randint(0,self.nClasses, size = (self.batchSize))
-                genTrainClasses = np.array([[1 if i == c else -1 for i in range(self.nClasses)] for c in genTrainClasses], dtype='float32')
+                #genTrainClasses = np.array([[1 if i == c else -1 for i in range(self.nClasses)] for c in genTrainClasses], dtype='float32')
                 gentrainLbls = [1]*self.batchSize 
                 gentrainLbls = np.reshape(gentrainLbls, (-1,))
                 ganLoss = self.gan.train_on_batch([genTrainNoise, genTrainClasses],gentrainLbls)
@@ -171,7 +176,7 @@ class CGAN_MNIST(Augmentator):
                     images = self.generator.predict([benchNoise, benchLabels])
                     out = ((images * 127.5) + 127.5).astype('uint8')
 
-                    showOutputAsImg(out, self.basePath + '/output_f' + str(self.currentFold) + '_e' + str(epoch) + '_' + '_'.join([str(a.argmax()) for a in benchLabels[:20]]) + '.png')
+                    showOutputAsImg(out, self.basePath + '/output_f' + str(self.currentFold) + '_e' + str(epoch) + '_' + '_'.join([str(a) for a in benchLabels[:20]]) + '.png')
                     plotLoss([[genLossHist, 'generator loss'],[discLossHist, 'discriminator loss']], self.basePath + '/trainPlot.png')
 
             if(epoch%5 == 0 or epoch == self.ganEpochs-1):
@@ -183,16 +188,16 @@ class CGAN_MNIST(Augmentator):
     #Gera e salva imagens
     def saveGenerationExample(self, nEntries = 20):
         noise = np.random.uniform(-1,1, size=(self.nClasses,self.noiseDim))
-        labels = np.array([[1 if i == j else -1 for i in range(self.nClasses)] for j in range(self.nClasses)], dtype='float32')
+        labels = np.array(range(self.nClasses))
         images = self.generator.predict([noise, labels])
         out = ((images * 127.5) + 127.5).astype('uint8')
-        showOutputAsImg(out, self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a.argmax()) for a in labels]) + '.png',self.nClasses)
+        showOutputAsImg(out, self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a) for a in labels]) + '.png',self.nClasses)
 
     def generate(self, nEntries):
         print(self.name + ": started data generation")
         genInput = np.random.uniform(-1,1,size=(nEntries,self.noiseDim))
         genLabelInput = np.random.randint(0,self.nClasses, size = (nEntries))
-        genLabelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in genLabelInput], dtype='float32')
+        #genLabelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in genLabelInput], dtype='float32')
         genImages = self.generator.predict([genInput, genLabelInput])
         print(self.name + ": finished data generation")
         return genImages, genLabelInput

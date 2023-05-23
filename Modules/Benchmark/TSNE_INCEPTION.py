@@ -31,7 +31,6 @@ class TSNE_INCEPTION(Benchmark):
         for i in range(math.floor(nEntries/self.inceptionBatchSize)):
             resizedImgs = []
             testImgs, testLbls = dataset.getTrainData(self.inceptionBatchSize*i, min(self.inceptionBatchSize*(i+1), nEntries))
-            testLbls = [np.argmax(lbl) for lbl in testLbls]
             
             for img in testImgs:
                 retyped = ((img * 127.5) + 127.5).astype('uint8')
@@ -45,8 +44,7 @@ class TSNE_INCEPTION(Benchmark):
                 del untyped
 
             genImgs, genLbls = augmentator.generate(self.inceptionBatchSize)
-                
-            genLbls = [np.argmax(lbl) + self.nClasses for lbl in genLbls]
+            genLbls += self.nClasses
 
             for img in genImgs:
                 retyped = ((img * 127.5) + 127.5).astype('uint8')

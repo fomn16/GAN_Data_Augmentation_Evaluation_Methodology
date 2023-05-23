@@ -12,3 +12,4 @@ class Params:
     dataDir = None
     datasetName = None
     runtime = None
+    saveModels = None

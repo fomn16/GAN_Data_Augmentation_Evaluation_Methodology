@@ -12,6 +12,8 @@ class DATASET_DIRECTLY(Augmentator):
         
         self.params = params
 
+        self.dataposition = 0
+
     #treinamento
     def train(self, dataset: Dataset):
         self.dataset = dataset
@@ -26,7 +28,6 @@ class DATASET_DIRECTLY(Augmentator):
         showOutputAsImg(out, self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a.argmax()) for a in labels]) + '.png',nEntries, self.params.imgChannels == 3)
 
     def generate(self, nEntries):
-        start = 0
-        if(nEntries != self.dataset.trainInstances):
-            start = np.random.randint(0, self.dataset.trainInstances - nEntries)
-        return self.dataset.getTrainData(start, start+nEntries)
+        if(self.dataposition + nEntries >= self.dataset.trainInstances):
+            self.dataposition = 0
+        return self.dataset.getTrainData(self.dataposition, self.dataposition+nEntries)

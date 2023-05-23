@@ -15,10 +15,11 @@ params.dataDir = './tfDatasets'
 params.kFold = 5
 params.currentFold = 0
 params.runtime = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
+params.saveModels = False
 
 datasets : List[Dataset] = []
-datasets.append(MNIST(params))
-#datasets.append(CIFAR_10(params))
+#datasets.append(MNIST(params))
+datasets.append(CIFAR_10(params))
 #datasets.append(STANFORD_ONLINE_PRODUCTS(params))
 
 for fold in range(params.kFold):
@@ -27,10 +28,10 @@ for fold in range(params.kFold):
         dataset.loadParams()
 
         augmentators : List[Augmentator] = []
-        augmentators.append(getAugmentator(Augmentators.CGAN, params))
-        augmentators.append(getAugmentator(Augmentators.DIRECT, params))
-        #augmentators.append(getAugmentator(Augmentators.GAN, params))
-        #augmentators.append(getAugmentator(Augmentators.MIXED, params, [augmentators, {0,2}]))
+        augmentators.extend(getAugmentators(Augmentators.CGAN, params))
+        #augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
+        #augmentators.extend(getAugmentators(Augmentators.GAN, params))
+        #augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,2}]))
 
         for augmentator in augmentators:
             if(augmentator != None):
@@ -43,8 +44,8 @@ for fold in range(params.kFold):
 
                 #cria testes
                 benchmarks : List[Benchmark] = []
-                benchmarks.append(getBenchmark(Benchmarks.CLASSIFIER, params))
-                benchmarks.append(getBenchmark(Benchmarks.TSNE_INCEPTION, params))
+                benchmarks.extend(getBenchmarks(Benchmarks.CLASSIFIER, params))
+                benchmarks.extend(getBenchmarks(Benchmarks.TSNE_INCEPTION, params))
 
                 #percorre os testes
                 for benchmark in benchmarks:

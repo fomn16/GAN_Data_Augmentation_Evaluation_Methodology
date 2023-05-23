@@ -1,7 +1,7 @@
 #imports de todas as bibliotecas utilizadas:
 from tensorflow.keras.models import Sequential, Model, load_model
 from tensorflow.keras.layers import Dense, BatchNormalization, Reshape, Conv2DTranspose, Conv2D, LeakyReLU, Flatten, Dropout, Embedding
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers import Adam, RMSprop
 from sklearn.utils import shuffle
 from sklearn.metrics import classification_report, roc_auc_score
 import pandas as pd
@@ -91,7 +91,7 @@ def loadIntoArrayLL(datasetSection, dataset, nClasses, start, end, imgId, lblId,
         iterator = map(mapFunction, dataset[datasetSection].as_numpy_iterator())
         
     imgs = np.zeros((end - start,) + output_shapes).astype('float')
-    lbls = np.full((end - start, nClasses), -1).astype('int')
+    lbls = np.full((end - start,), 0).astype('int')
     
     for i, instance in enumerate(itertools.islice(iterator, start, end)):
         img = instance[imgId]
@@ -99,7 +99,7 @@ def loadIntoArrayLL(datasetSection, dataset, nClasses, start, end, imgId, lblId,
         img = np.expand_dims(img.astype('float'), axis=0)
         img = (img - 127.5) / 127.5
         imgs[i] = img
-        lbls[i, label] = 1
+        lbls[i] = label
     return imgs, lbls
 
 #recupera o bloco do dataset considerando que os splits de treinamento e teste são juntos

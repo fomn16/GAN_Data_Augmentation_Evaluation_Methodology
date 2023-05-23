@@ -2,30 +2,25 @@ import sys
 sys.path.insert(1, '../../')
 from Modules.Shared.helper import *
 
-def waterstein_loss(y_true, y_pred):
-    y_true = keras.backend.cast(y_true, dtype='float32')
-    return -tf.reduce_mean(y_true * y_pred)
-
-class CGAN_CIFAR_10(Augmentator):
+class CGAN_CIFAR_10_Crossentropy(Augmentator):
     #Constantes:
     genWidth = 4
     genHeight = 4
-    genDepth = 256
+    genDepth = 128
 
-    noiseDim = 200
+    noiseDim = 100
     genFCOutputDim = 1024
     discFCOutputDim = 2048
 
     initLr = 2e-4
     leakyReluAlpha = 0.2
-    l2RegParamGen = 0.001
-    l2RegParamDisc = 0.4
+    l2RegParamGen = 0.01
+    l2RegParamDisc = 0.1
     dropoutParam = 0.01
     batchNormMomentum = 0.4
 
     ganEpochs = 100
     batchSize = 64
-    extraDiscEpochs = 3
 
     generator = None
     discriminator = None
@@ -52,7 +47,7 @@ class CGAN_CIFAR_10(Augmentator):
             else:
                 model = layers.Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_regularizer=regularizers.l2(self.l2RegParamDisc))(model)
             model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-        model = layers.Dropout(self.dropoutParam)(model)
+            model = layers.Dropout(self.dropoutParam)(model)
         model = layers.MaxPool2D(pool_size=(2,2), padding='valid', strides=(2,2))(model)
         return model
     
@@ -86,9 +81,9 @@ class CGAN_CIFAR_10(Augmentator):
         reshapedLabels = layers.Reshape((self.genWidth, self.genHeight, 1))(embeddedLabels)
         cgenX = layers.concatenate([cgenX, reshapedLabels])
 
-        model = self.AddBlockTranspose(cgenX, 2, 512, 3)
+        model = self.AddBlockTranspose(cgenX, 1, 512, 3)
 
-        model = self.AddBlockTranspose(model, 2, 256, 3)
+        model = self.AddBlockTranspose(model, 1, 256, 3)
 
         model = self.AddBlockTranspose(model, 2, 128, 3)
 
@@ -110,16 +105,16 @@ class CGAN_CIFAR_10(Augmentator):
         discX = layers.concatenate([discInput, reshapedLabels])
 
         discX = self.AddBlock(discX, 2, 64, 3)
-        discX = self.AddBlock(discX, 2, 128, 3)
-        discX = self.AddBlock(discX, 2, 256, 3)
-        discX = self.AddBlock(discX, 2, 256, 3)
+        discX = self.AddBlock(discX, 1, 128, 3)
+        discX = self.AddBlock(discX, 1, 256, 3)
+        discX = self.AddBlock(discX, 2, 512, 3)
         #discX = layers.BatchNormalization(axis=-1)(discX)
 
         # camada densa
         discX = layers.Flatten()(discX)
 
-        # nó de output, mapear em -1 ou 1
-        discOutput = layers.Dense(1, activation='tanh', name = 'discoutput_realvsfake')(discX)
+        # nó de output, mapear em 0 ou 1
+        discOutput = layers.Dense(1, activation='sigmoid', name = 'discoutput_realvsfake')(discX)
 
         self.discriminator = keras.Model(inputs = [discInput, labelInput], outputs = discOutput, name = 'discriminator')
 
@@ -129,9 +124,9 @@ class CGAN_CIFAR_10(Augmentator):
 
     #compilando discriminador e gan
     def compile(self):
-        optDiscr = RMSprop(self.initLr) #Adam(learning_rate = self.initLr, beta_1 = 0.5)
+        optDiscr = Adam(learning_rate = self.initLr, beta_1 = 0.5)
         self.createDiscModel()
-        self.discriminator.compile(loss=waterstein_loss, optimizer=optDiscr, metrics=['accuracy'])
+        self.discriminator.compile(loss='binary_crossentropy', optimizer=optDiscr, metrics=['accuracy'])
 
         self.createGenModel()
         self.discriminator.trainable = False
@@ -140,8 +135,8 @@ class CGAN_CIFAR_10(Augmentator):
         cganOutput =  self.discriminator([self.generator([cganNoiseInput, cganLabelInput]), cganLabelInput])
         self.gan = Model((cganNoiseInput, cganLabelInput), cganOutput)
 
-        optcGan = RMSprop(self.initLr) #Adam(learning_rate = self.initLr, beta_1=0.5)
-        self.gan.compile(loss=waterstein_loss, optimizer=optcGan)
+        optcGan = Adam(learning_rate = self.initLr, beta_1=0.5)
+        self.gan.compile(loss='binary_crossentropy', optimizer=optcGan)
         
         keras.utils.plot_model(
             self.gan, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/gan.png')
@@ -161,24 +156,23 @@ class CGAN_CIFAR_10(Augmentator):
         #benchLabels = np.array([[1 if i == bl else -1 for i in range(self.nClasses)] for bl in benchLabels], dtype='float32')
 
         for epoch in range(self.ganEpochs):
-            nBatches = int(dataset.trainInstances/self.batchSize) - self.extraDiscEpochs
+            nBatches = int(dataset.trainInstances/self.batchSize)
             for i in range(nBatches):
-                for j in range(self.extraDiscEpochs):
-                    imgBatch, labelBatch = dataset.getTrainData((i+j)*self.batchSize, (i+j+1)*self.batchSize)
-                    
-                    genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
-                    labelInput = np.random.randint(0,self.nClasses, size = (self.batchSize))
-                    #labelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in labelInput], dtype='float32')
-                    
-                    genImgOutput = self.generator.predict([genInput, labelInput], verbose=0)
+                imgBatch, labelBatch = dataset.getTrainData((i)*self.batchSize, (i+1)*self.batchSize)
+                
+                genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
+                labelInput = np.random.randint(0,self.nClasses, size = (self.batchSize))
+                #labelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in labelInput], dtype='float32')
+                
+                genImgOutput = self.generator.predict([genInput, labelInput], verbose=0)
 
-                    XImg = np.concatenate((imgBatch, genImgOutput))
-                    XLabel = np.concatenate((labelBatch, labelInput))
-                    y = ([-1] * self.batchSize) + ([1] * self.batchSize)
-                    y = np.reshape(y, (-1,))
-                    (XImg, XLabel, y) = shuffle(XImg, XLabel, y)
-                    
-                    discLoss = self.discriminator.train_on_batch([XImg,XLabel], y)
+                XImg = np.concatenate((imgBatch, genImgOutput))
+                XLabel = np.concatenate((labelBatch, labelInput))
+                y = ([0] * self.batchSize) + ([1] * self.batchSize)
+                y = np.reshape(y, (-1,))
+                (XImg, XLabel, y) = shuffle(XImg, XLabel, y)
+                
+                discLoss = self.discriminator.train_on_batch([XImg,XLabel], y)
 
                 '''for layer in self.discriminator.layers:
                     weights = layer.get_weights()
@@ -189,7 +183,7 @@ class CGAN_CIFAR_10(Augmentator):
                 genTrainClasses = np.random.randint(0,self.nClasses, size = (self.batchSize))
                 #genTrainClasses = np.array([[1 if i == c else -1 for i in range(self.nClasses)] for c in genTrainClasses], dtype='float32')
 
-                gentrainLbls = [-1]*self.batchSize 
+                gentrainLbls = [0]*self.batchSize 
                 gentrainLbls = np.reshape(gentrainLbls, (-1,))
                 ganLoss = self.gan.train_on_batch([genTrainNoise, genTrainClasses],gentrainLbls)
 

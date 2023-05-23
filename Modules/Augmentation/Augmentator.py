@@ -3,6 +3,7 @@ sys.path.insert(1, '../../')
 from Modules.Shared.helper import *
 from Modules.Shared.Params import Params
 
+#imgs => [w][h][-1,1], lbls => [0,1]
 class Augmentator:
     name = None
     def __init__(self, params:Params, extraParams = None, nameComplement = ""):

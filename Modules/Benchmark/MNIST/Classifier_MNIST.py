@@ -65,15 +65,14 @@ class Classifier_MNIST(Benchmark):
         nBatches = int(dataset.trainInstances/self.batchSize)
         for epoch in range(round(self.nEpochs * extraEpochs)):
             imgs,lbls = augmentator.generate(self.batchSize*nBatches)
-            lbls = (lbls + 1)/2
+            lbls = np.array([[1 if i == lbl else 0 for i in range(self.nClasses)] for lbl in lbls], dtype='float32')
             for i in range(nBatches):
                 imgBatch = imgs[i*nBatches:(i+1)*nBatches]
                 labelBatch = lbls[i*nBatches:(i+1)*nBatches]
 
                 classLoss = self.classifier.train_on_batch(imgBatch,labelBatch)
-                
+                classLossHist.append(classLoss)
                 if i == nBatches-1:
-                    classLossHist.append(classLoss)
                     IPython.display.clear_output(True)
                     
                     print("Epoch " + str(epoch) + "\nclassifier loss: " + str(classLoss))
@@ -89,7 +88,7 @@ class Classifier_MNIST(Benchmark):
 
     def runTest(self, dataset: Dataset):
         imgs, lbls = dataset.getTestData(0, dataset.testInstances)
-        lbls = (lbls + 1)/2
+        lbls = np.array([[1 if i == lbl else 0 for i in range(self.nClasses)] for lbl in lbls], dtype='float32')
         classOutput = self.classifier.predict(imgs, verbose=0)
         classOutput = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in classOutput]
         lbls = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in lbls]

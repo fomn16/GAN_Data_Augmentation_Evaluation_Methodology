@@ -52,7 +52,7 @@ class Classifier_MNIST(Benchmark):
 
         self.classifier.save(verifiedFolder(self.basePath + "/modelSaves/init/fold_" + str(self.currentFold)))
 
-    def train(self, augmentator: Augmentator, dataset: Dataset, extraEpochs = 1):
+    def train(self, augmentator: Augmentator, dataset: Dataset):
         trainName = augmentator.name
         
         self.classifier = load_model(self.basePath + "/modelSaves/init/fold_" + str(self.currentFold))
@@ -63,12 +63,12 @@ class Classifier_MNIST(Benchmark):
         infoFile.close()
 
         nBatches = int(dataset.trainInstances/self.batchSize)
-        for epoch in range(round(self.nEpochs * extraEpochs)):
-            imgs,lbls = augmentator.generate(self.batchSize*nBatches)
+        for epoch in range(round(self.nEpochs)):
+            imgs,lbls = augmentator.generate(dataset.trainInstances)
             lbls = np.array([[1 if i == lbl else 0 for i in range(self.nClasses)] for lbl in lbls], dtype='float32')
             for i in range(nBatches):
-                imgBatch = imgs[i*nBatches:(i+1)*nBatches]
-                labelBatch = lbls[i*nBatches:(i+1)*nBatches]
+                imgBatch = imgs[i*self.batchSize:(i+1)*self.batchSize]
+                labelBatch = lbls[i*self.batchSize:(i+1)*self.batchSize]
 
                 classLoss = self.classifier.train_on_batch(imgBatch,labelBatch)
                 classLossHist.append(classLoss)
@@ -82,7 +82,7 @@ class Classifier_MNIST(Benchmark):
 
                     plotLoss([[classLossHist, 'classifier loss']], self.basePath + '/trainPlot_f' + str(self.currentFold) + '_' + trainName + '.png')
 
-            if(epoch % 5 == 0 or epoch == self.nEpochs * extraEpochs - 1):
+            if(epoch % 5 == 0 or epoch == self.nEpochs - 1):
                 self.classifier.save(verifiedFolder(self.basePath + '/modelSaves/' + trainName + '/fold_' + str(self.currentFold) + '/epoch_' + str(epoch)))
         self.classifier.save(verifiedFolder(self.basePath + '/modelSaves/' + trainName + '/fold_' + str(self.currentFold) + '/final'))
 

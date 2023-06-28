@@ -1,7 +1,8 @@
 #imports de todas as bibliotecas utilizadas:
-from tensorflow.keras.models import Sequential, Model, load_model
-from tensorflow.keras.layers import Dense, BatchNormalization, Reshape, Conv2DTranspose, Conv2D, LeakyReLU, Flatten, Dropout, Embedding
-from tensorflow.keras.optimizers import Adam, RMSprop
+from keras.models import Sequential, Model, load_model
+from keras.layers import Dense, BatchNormalization, Reshape, Conv2DTranspose, Conv2D, LeakyReLU, Flatten, Dropout, Embedding
+from keras.optimizers import Adam, RMSprop
+import tensorflow_addons as tfa
 from sklearn.utils import shuffle
 from sklearn.metrics import classification_report, roc_auc_score
 import pandas as pd
@@ -9,7 +10,7 @@ import numpy as np
 import IPython.display
 import PIL.Image
 from tensorflow import keras
-from tensorflow.keras import layers
+from keras import layers
 from keras.layers import Input
 from keras import regularizers
 import matplotlib.pyplot as plt
@@ -28,6 +29,10 @@ from Modules.Datasets.Dataset import Dataset
 from Modules.Augmentation.Augmentator import Augmentator
 from Modules.Benchmark.Benchmark import Benchmark
 from Modules.Shared.Params import Params
+
+'''
+pip install tensorflow==2.10 tensorflow-addons==0.20.0 scikit-learn pandas ipython pillow matplotlib tensorflow_datasets==4.8.3 imgaug seaborn pydot
+'''
 
 #Funções helper para apresentação de imagens e dados de treinamento
 def concatArray(a, n, colored):

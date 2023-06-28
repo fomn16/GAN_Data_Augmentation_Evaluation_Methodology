@@ -5,7 +5,7 @@ import seaborn as sns
 sys.path.insert(1, '../../')
 from Modules.Shared.helper import *
 
-from tensorflow.keras.applications.inception_v3 import InceptionV3
+from keras.applications.inception_v3 import InceptionV3
 from sklearn.manifold import TSNE
 
 class TSNE_INCEPTION(Benchmark):

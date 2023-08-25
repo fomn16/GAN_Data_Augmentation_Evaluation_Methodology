@@ -6,10 +6,24 @@ def wasserstein_loss(y_true, y_pred):
     y_true = tf.cast(y_true, y_pred.dtype)#K.cast(y_true, dtype=tf.float32)
     return -K.mean(y_true * y_pred)
 
+def my_distance(y_true, y_pred):
+    #input range is [-1,1]
+    y_true = tf.cast(y_true, y_pred.dtype)  # Ensure the same data type
+    return tf.reduce_mean(tf.abs(y_true - y_pred))
+
 def my_accuracy(y_true, y_pred):
     #input range is [-1,1]
     y_true = tf.cast(y_true, y_pred.dtype)  # Ensure the same data type
-    return 1 - (tf.reduce_mean(tf.abs(y_true - y_pred))/2)
+    
+    # Calculate the signs of y_true and y_pred
+    y_true_sign = tf.sign(y_true)
+    y_pred_sign = tf.sign(y_pred)
+    
+    # Calculate the element-wise equality of signs
+    sign_equal = tf.equal(y_true_sign, y_pred_sign)
+    
+    # Calculate the percentage of time with the same sign
+    return tf.reduce_mean(tf.cast(sign_equal, tf.float32)) * 100.0
 
 class CGAN_CIFAR_10(Augmentator):
     #Constantes:
@@ -20,17 +34,17 @@ class CGAN_CIFAR_10(Augmentator):
     noiseDepth = int(np.ceil(approximateNoiseDim/(genWidth*genHeight)))
     noiseDim = genWidth*genHeight*noiseDepth
 
-    initLr = 5e-5
+    initLr = 2.5e-5
     leakyReluAlpha = 0.2
     dropoutParam = 0.05
     batchNormMomentum = 0.8
     batchNormEpsilon = 2e-4
 
-    clipValue = 0.01
+    clipValue = 0.008
 
     ganEpochs = 100
     batchSize = 64
-    extraDiscEpochs = 2
+    extraDiscEpochs = 3
 
     generator = None
     discriminator = None
@@ -121,7 +135,7 @@ class CGAN_CIFAR_10(Augmentator):
         discX = layers.Flatten()(discX)
 
         # nó de output, mapear em -1 ou 1
-        discOutput = Dense(1, activation='tanh', name = 'discoutput_realvsfake', kernel_initializer='glorot_uniform')(discX)
+        discOutput = Dense(1, name = 'discoutput_realvsfake', kernel_initializer='glorot_uniform')(discX)
 
         self.discriminator = keras.Model(inputs = [discInput, labelInput], outputs = discOutput, name = 'discriminator')
 
@@ -133,7 +147,7 @@ class CGAN_CIFAR_10(Augmentator):
     def compile(self):
         optDiscr = RMSprop(learning_rate=self.initLr)#Adam(learning_rate = self.initLr, beta_1 = 0.5, beta_2=0.9)
         self.createDiscModel()
-        self.discriminator.compile(loss=wasserstein_loss, optimizer=optDiscr, metrics=[my_accuracy])
+        self.discriminator.compile(loss=wasserstein_loss, optimizer=optDiscr, metrics=[my_distance, my_accuracy])
 
         self.createGenModel()
         self.discriminator.trainable = False
@@ -186,10 +200,10 @@ class CGAN_CIFAR_10(Augmentator):
                         weights = [np.clip(w, -self.clipValue, self.clipValue) for w in weights]
                         l.set_weights(weights)
                 
-                genTrainNoise = np.random.uniform(-1,1,size=(self.batchSize*2,self.noiseDim))
-                genTrainClasses = np.random.randint(0,self.nClasses, size = (self.batchSize*2))
+                genTrainNoise = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
+                genTrainClasses = np.random.randint(0,self.nClasses, size = (self.batchSize))
 
-                gentrainLbls = [-1]*(self.batchSize*2)
+                gentrainLbls = [-1]*(self.batchSize)
                 gentrainLbls = np.reshape(gentrainLbls, (-1,))
                 ganLoss = self.gan.train_on_batch([genTrainNoise, genTrainClasses],gentrainLbls)
 

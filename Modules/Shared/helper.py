@@ -2,7 +2,6 @@
 from keras.models import Sequential, Model, load_model
 from keras.layers import Dense, BatchNormalization, Reshape, Conv2DTranspose, Conv2D, LeakyReLU, Flatten, Dropout, Embedding
 from keras.optimizers import Adam, RMSprop
-import tensorflow_addons as tfa
 from sklearn.utils import shuffle
 from sklearn.metrics import classification_report, roc_auc_score
 import pandas as pd
@@ -23,6 +22,7 @@ from typing import List
 from datetime import datetime
 import tensorflow as tf
 import sys
+from keras import backend as K
 sys.path.insert(1, '../../')
 
 from Modules.Datasets.Dataset import Dataset

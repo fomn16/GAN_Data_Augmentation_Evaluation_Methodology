@@ -23,6 +23,7 @@ from datetime import datetime
 import tensorflow as tf
 import sys
 from keras import backend as K
+import pickle
 sys.path.insert(1, '../../')
 
 from Modules.Datasets.Dataset import Dataset
@@ -151,3 +152,12 @@ def getFromDatasetLL(start, end, currentFold, n_instances_fold_train, testInstan
             lbls = np.concatenate((lbls, lbls2))
             del imgs2, lbls2
     return imgs, lbls
+
+def save_pickle(file_path, data):
+    with open(file_path, 'wb') as f:
+        pickle.dump(data, f)
+
+def load_pickle(file_path):
+    with open(file_path, 'rb') as f:
+        data = pickle.load(f)
+    return data

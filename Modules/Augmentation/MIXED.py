@@ -20,7 +20,7 @@ class MIXED(Augmentator):
         
         for id in self.ids:
             _imgs, _lbls = self.arr[id].generate(nEntries)
-            if(imgs == []):
+            if(len(imgs) == 0):
                 imgs = _imgs
                 lbls = _lbls
             else:

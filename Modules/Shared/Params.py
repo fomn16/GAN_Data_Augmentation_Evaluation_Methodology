@@ -13,3 +13,4 @@ class Params:
     datasetName = None
     runtime = None
     saveModels = None
+    continuing = None

@@ -3,7 +3,9 @@ sys.path.insert(1, '../../')
 from Modules.Shared.Params import Params
 from Modules.Shared.helper import *
 
-from Modules.Benchmark.MNIST.Classifier_MNIST import Classifier_MNIST
+from Modules.Benchmark.Classifier.Classifier_MNIST import Classifier_MNIST
+from Modules.Benchmark.Classifier.Classifier_CIFAR import Classifier_CIFAR
+from Modules.Benchmark.Classifier.Classifier_SOP import Classifier_SOP
 from Modules.Benchmark.TSNE_INCEPTION import TSNE_INCEPTION
 
 from Modules.Augmentation.MNIST.CGAN_MNIST import CGAN_MNIST
@@ -57,9 +59,9 @@ def getBenchmarks(benchmark, params: Params, nameComplement = "") -> List[Benchm
         if(params.datasetName == Datasets.MNIST):
             return [Classifier_MNIST(params)]
         if(params.datasetName == Datasets.CIFAR_10):
-            return [Classifier_MNIST(params, "_CIFAR")]
+            return [Classifier_CIFAR(params)]
         if(params.datasetName == Datasets.STANFORD_ONLINE):
-            return [Classifier_MNIST(params, "_SOP")]
+            return [Classifier_SOP(params)]
     elif(benchmark == Benchmarks.TSNE_INCEPTION):
             return [TSNE_INCEPTION(params)]
     return [None]

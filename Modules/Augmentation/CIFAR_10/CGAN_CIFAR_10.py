@@ -144,20 +144,20 @@ class CGAN_CIFAR_10(Augmentator):
         )
 
     def saveModel(self, epoch = 0, genLossHist = [], discLossHist = []):
-        saveParam('current_epoch', epoch)
-        saveParam('gen_loss_hist', genLossHist)
-        saveParam('disc_loss_hist', discLossHist)
+        saveParam(self.name + '_current_epoch', epoch)
+        saveParam(self.name + '_gen_loss_hist', genLossHist)
+        saveParam(self.name + '_disc_loss_hist', discLossHist)
         epochPath = self.basePath + '/modelSaves/fold_' + str(self.currentFold) + '/epoch_' + str(epoch)
 
         self.discriminator.save_weights(verifiedFolder(epochPath + '/disc_weights'))
         self.generator.save_weights(verifiedFolder(epochPath + '/gen_weights'))
 
-        saveParam('disc_opt_lr', np.float64(self.optDiscr._decayed_lr('float32').numpy()))
-        saveParam('gan_opt_lr', np.float64(self.optcGan._decayed_lr('float32').numpy()))
+        saveParam(self.name + '_disc_opt_lr', np.float64(self.optDiscr._decayed_lr('float32').numpy()))
+        saveParam(self.name + '_gan_opt_lr', np.float64(self.optcGan._decayed_lr('float32').numpy()))
 
     #compilando discriminador e gan
     def compile(self):
-        epochPath = self.basePath + '/modelSaves/fold_' + str(self.currentFold) + '/epoch_' + str(loadParam('current_epoch'))
+        epochPath = self.basePath + '/modelSaves/fold_' + str(self.currentFold) + '/epoch_' + str(loadParam(self.name + '_current_epoch'))
         
         self.createDiscModel()
         self.createGenModel()
@@ -165,8 +165,8 @@ class CGAN_CIFAR_10(Augmentator):
         if(self.params.continuing):
             self.discriminator.load_weights(verifiedFolder(epochPath + '/disc_weights'))
             self.generator.load_weights(verifiedFolder(epochPath + '/gen_weights'))
-            self.optDiscr = RMSprop(learning_rate=loadParam('disc_opt_lr'))#Adam(learning_rate = self.initLr, beta_1 = 0.5, beta_2=0.9)
-            self.optcGan = RMSprop(learning_rate=loadParam('gan_opt_lr'))#Adam(learning_rate = self.initLr*10, beta_1=0.5, beta_2=0.9)
+            self.optDiscr = RMSprop(learning_rate=loadParam(self.name + '_disc_opt_lr'))#Adam(learning_rate = self.initLr, beta_1 = 0.5, beta_2=0.9)
+            self.optcGan = RMSprop(learning_rate=loadParam(self.name + '_gan_opt_lr'))#Adam(learning_rate = self.initLr*10, beta_1=0.5, beta_2=0.9)
         else:
             self.optDiscr = RMSprop(learning_rate=self.initLr)#Adam(learning_rate = self.initLr, beta_1 = 0.5, beta_2=0.9)
             self.optcGan = RMSprop(learning_rate=self.initLr)#Adam(learning_rate = self.initLr*10, beta_1=0.5, beta_2=0.9)
@@ -198,11 +198,11 @@ class CGAN_CIFAR_10(Augmentator):
         benchLabels = None
         startEpoch = None
         if(self.params.continuing):
-            benchNoise = np.array(loadParam('bench_noise'))
-            benchLabels = np.array(loadParam('bench_labels'))
-            startEpoch = loadParam('current_epoch')
-            discLossHist = loadParam('disc_loss_hist')
-            genLossHist = loadParam('gen_loss_hist')
+            benchNoise = np.array(loadParam(self.name + '_bench_noise'))
+            benchLabels = np.array(loadParam(self.name + '_bench_labels'))
+            startEpoch = loadParam(self.name + '_current_epoch')
+            discLossHist = loadParam(self.name + '_disc_loss_hist')
+            genLossHist = loadParam(self.name + '_gen_loss_hist')
         else:
             #noise e labels de benchmark
             benchNoise = np.random.uniform(-1,1, size=(256,self.noiseDim))
@@ -210,11 +210,11 @@ class CGAN_CIFAR_10(Augmentator):
             for i in range(20):
                 benchLabels[i] = int(i/2)
             startEpoch = -1
-            saveParam('bench_noise', benchNoise.tolist())
-            saveParam('bench_labels', benchLabels.tolist())
-            saveParam('current_epoch', 0)
-            saveParam('disc_loss_hist', [])
-            saveParam('gen_loss_hist', [])
+            saveParam(self.name + '_bench_noise', benchNoise.tolist())
+            saveParam(self.name + '_bench_labels', benchLabels.tolist())
+            saveParam(self.name + '_current_epoch', 0)
+            saveParam(self.name + '_disc_loss_hist', [])
+            saveParam(self.name + '_gen_loss_hist', [])
 
             #benchLabels = np.array([[1 if i == bl else -1 for i in range(self.nClasses)] for bl in benchLabels], dtype='float32')
         

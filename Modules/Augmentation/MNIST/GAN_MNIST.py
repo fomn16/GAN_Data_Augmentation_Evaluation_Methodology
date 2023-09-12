@@ -124,6 +124,7 @@ class GAN_MNIST(Augmentator):
             nBatches = int(dataset.trainInstances/self.batchSize)
             for i in range(nBatches):
                 imgBatch, labelBatch = dataset.getTrainData(i*self.batchSize,(i+1)*self.batchSize)
+                labelBatch = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in labelBatch], dtype='float32')
                 genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                 genImgOutput, genLabelOutput = self.generator.predict(genInput, verbose=0)
 
@@ -168,5 +169,6 @@ class GAN_MNIST(Augmentator):
         print(self.name + ": started data generation")
         genInput = np.random.uniform(-1,1,size=(nEntries,self.noiseDim))
         genImg, genLbl = self.generator.predict(genInput, verbose=0)
+        genLbl = [a.argmax() for a in genLbl]
         print(self.name + ": finished data generation")
         return np.array(genImg[:nEntries]), np.array(genLbl[:nEntries])

@@ -21,7 +21,7 @@ class STANFORD_ONLINE_PRODUCTS(Dataset):
         self.trainInstancesDataset = self.info.splits['train'].num_examples
         self.testInstancesDataset = self.info.splits['test'].num_examples
         #número total de instâncias
-        self.totalInstances = self.trainInstancesDataset + self.testInstancesDataset
+        self.totalInstances = int(np.floor((self.trainInstancesDataset + self.testInstancesDataset)))
         #número de instâncias em cada divisão do fold que vai para treinamento
         self.n_instances_fold_train = int(np.floor(self.totalInstances/self.params.kFold))
         #numero de instâncias de treinamento nesse fold

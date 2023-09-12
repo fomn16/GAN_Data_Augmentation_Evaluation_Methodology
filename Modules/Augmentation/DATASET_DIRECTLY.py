@@ -14,8 +14,12 @@ class DATASET_DIRECTLY(Augmentator):
 
         self.dataposition = 0
 
+        self.dataset = None
+
     #treinamento
     def train(self, dataset: Dataset):
+        print("dataset_directly, setting dataset as ")
+        print(dataset)
         self.dataset = dataset
 
     #Gera e salva imagens

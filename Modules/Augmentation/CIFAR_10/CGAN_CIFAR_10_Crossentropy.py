@@ -153,8 +153,6 @@ class CGAN_CIFAR_10_Crossentropy(Augmentator):
         for i in range(20):
             benchLabels[i] = int(i/2)
 
-        #benchLabels = np.array([[1 if i == bl else -1 for i in range(self.nClasses)] for bl in benchLabels], dtype='float32')
-
         for epoch in range(self.ganEpochs):
             nBatches = int(dataset.trainInstances/self.batchSize)
             for i in range(nBatches):
@@ -162,7 +160,6 @@ class CGAN_CIFAR_10_Crossentropy(Augmentator):
                 
                 genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                 labelInput = np.random.randint(0,self.nClasses, size = (self.batchSize))
-                #labelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in labelInput], dtype='float32')
                 
                 genImgOutput = self.generator.predict([genInput, labelInput], verbose=0)
 

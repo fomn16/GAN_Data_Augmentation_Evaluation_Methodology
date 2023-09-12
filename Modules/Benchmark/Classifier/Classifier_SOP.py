@@ -3,12 +3,12 @@ sys.path.insert(1, '../../')
 from Modules.Shared.helper import *
 from Modules.Shared.Params import Params
 
-class Classifier_MNIST(Benchmark):
+class Classifier_SOP(Benchmark):
     #constantes
     leakyReluAlpha = 0.2
     FCOutputDim = 512
     initLr = 2e-4
-    nEpochs = 8
+    nEpochs = 10
     batchSize = 128
 
     def __init__(self, params: Params, nameComplement = ""):
@@ -29,11 +29,9 @@ class Classifier_MNIST(Benchmark):
 
     def __create(self):
         classInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'classinput')
-        # primeira camada convolucional, recebe formato das imagens
         classX = layers.Conv2D(filters=32, kernel_size=(5,5), padding='same', strides=(2,2), activation='relu')(classInput)
-
-        # segunda camada convolucional.
-        classX = layers.Conv2D(filters=64, kernel_size=(5,5), padding='same', strides=(2,2), activation='relu')(classX)
+        classX = layers.Conv2D(filters=64, kernel_size=(4,4), padding='same', strides=(2,2), activation='relu')(classX)
+        classX = layers.Conv2D(filters=128, kernel_size=(3,3), padding='same', strides=(2,2), activation='relu')(classX)
 
         # camada densa
         classX = layers.Flatten()(classX)
@@ -64,12 +62,9 @@ class Classifier_MNIST(Benchmark):
 
         nBatches = int(dataset.trainInstances/self.batchSize)
         for epoch in range(round(self.nEpochs)):
-            imgs,lbls = augmentator.generate(dataset.trainInstances)
-            lbls = np.array([[1 if i == lbl else 0 for i in range(self.nClasses)] for lbl in lbls], dtype='float32')
             for i in range(nBatches):
-                imgBatch = imgs[i*self.batchSize:(i+1)*self.batchSize]
-                labelBatch = lbls[i*self.batchSize:(i+1)*self.batchSize]
-
+                imgBatch,labelBatch = augmentator.generate(self.batchSize)
+                labelBatch = np.array([[1 if i == lbl else 0 for i in range(self.nClasses)] for lbl in labelBatch], dtype='float32')
                 classLoss = self.classifier.train_on_batch(imgBatch,labelBatch)
                 classLossHist.append(classLoss)
                 if i == nBatches-1:
@@ -87,12 +82,20 @@ class Classifier_MNIST(Benchmark):
         self.classifier.save(verifiedFolder(self.basePath + '/modelSaves/' + trainName + '/fold_' + str(self.currentFold) + '/final'))
 
     def runTest(self, dataset: Dataset):
-        imgs, lbls = dataset.getTestData(0, dataset.testInstances)
-        lbls = np.array([[1 if i == lbl else 0 for i in range(self.nClasses)] for lbl in lbls], dtype='float32')
-        classOutput = self.classifier.predict(imgs, verbose=0)
-        classOutput = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in classOutput]
-        lbls = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in lbls]
-        report = classification_report(lbls, classOutput) + '\nauroc score: ' + str(roc_auc_score(lbls, classOutput)) + '\n'
+        y = []
+        x = []
+
+        nBatches = int(dataset.testInstances/self.batchSize)
+        for i in range(nBatches):
+            imgs, lbls = dataset.getTestData(i*self.batchSize, (i+1)*self.batchSize)
+            lbls = np.array([[1 if i == lbl else 0 for i in range(self.nClasses)] for lbl in lbls], dtype='float32')
+            classOutput = self.classifier.predict(imgs, verbose=0)
+            classOutput = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in classOutput]
+            lbls = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in lbls]
+            y.extend(lbls)
+            x.extend(classOutput)
+
+        report = classification_report(y, x) + '\nauroc score: ' + str(roc_auc_score(y, x)) + '\n'
 
         print(report)
         infoFile = open(self.basePath + '/info.txt', 'a')

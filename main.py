@@ -7,9 +7,10 @@ from Modules.Shared.Saving import *
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
-#carrega dataset
+#cria objeto de parametros
 params = Params()
 
+#vendo se havia uma execução em andamento, e carregando seu progresso
 if(loadParam('active') is None):
     #local no qual os datasets serão salvos
     params.dataDir = './tfDatasets'
@@ -35,39 +36,39 @@ else:
     params.continuing = True
 
 datasets : List[Dataset] = []
-#datasets.append(MNIST(params))
 datasets.append(CIFAR_10(params))
+#datasets.append(MNIST(params))
 #datasets.append(STANFORD_ONLINE_PRODUCTS(params))
 
 for fold in range(params.currentFold, params.kFold):
     params.currentFold = fold
     saveParam('params_currentFold', params.currentFold)
-    currentDatasetId = loadParam('current_dataset_id')
-    if(currentDatasetId is None):
-        currentDatasetId = 0
-    for datasetId in range(currentDatasetId, len(datasets)):
-        saveParam('current_dataset_id', datasetId)
-        dataset = datasets[datasetId]
+
+    loadedDatasetId = loadParam('current_dataset_id', 0)
+    for dataset in datasets[loadedDatasetId:]:
+        saveParam('current_dataset_id', loadedDatasetId)
+        loadedDatasetId+=1
 
         dataset.loadParams()
+
         augmentators : List[Augmentator] = []
+        #augmentators.extend(getAugmentators(Augmentators.GAN, params))
         augmentators.extend(getAugmentators(Augmentators.CGAN, params))
         augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
-        #augmentators.extend(getAugmentators(Augmentators.GAN, params))
         augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,1}]))
 
-        currentAugmentatorId = loadParam('current_augmentator_id')
-        if(currentAugmentatorId is None):
-            currentAugmentatorId = 0
-        for augmentatorId in range(currentAugmentatorId, len(augmentators)):
-            saveParam('current_augmentator_id', augmentatorId)
-            if(augmentators[augmentatorId] != None):
-                #treinando gan
-                augmentators[augmentatorId].compile()
-                augmentators[augmentatorId].train(dataset)
+        loadedAugmentatorId = loadParam('current_augmentator_id', 0)
+        for augmentator in augmentators[loadedAugmentatorId:]:
+            saveParam('current_augmentator_id', loadedAugmentatorId)
+            loadedAugmentatorId+=1
+            if(augmentator != None):
+
+                #treinando
+                augmentator.compile()
+                augmentator.train(dataset)
 
                 #salva resultado final
-                augmentators[augmentatorId].saveGenerationExample()
+                augmentator.saveGenerationExample()
                 params.continuing = False
 
                 #cria testes
@@ -78,5 +79,7 @@ for fold in range(params.currentFold, params.kFold):
                 #percorre os testes
                 for benchmark in benchmarks:
                     if(benchmark != None):
-                        benchmark.train(augmentators[augmentatorId], dataset)
+                        benchmark.train(augmentator, dataset)
                         benchmark.runTest(dataset)
+        saveParam('current_augmentator_id', 0)
+    saveParam('current_dataset_id', 0)

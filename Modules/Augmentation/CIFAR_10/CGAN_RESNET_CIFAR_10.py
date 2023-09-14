@@ -2,6 +2,7 @@ import sys
 sys.path.insert(1, '../../')
 from Modules.Shared.helper import *
 from Modules.Shared.Saving import *
+from keras.applications.resnet_v2 import ResNet152V2 
 
 def wasserstein_loss(y_true, y_pred):
     y_true = tf.cast(y_true, y_pred.dtype)#K.cast(y_true, dtype=tf.float32)
@@ -26,7 +27,7 @@ def my_accuracy(y_true, y_pred):
     # Calculate the percentage of time with the same sign
     return tf.reduce_mean(tf.cast(sign_equal, tf.float32)) * 100.0
 
-class CGAN_CIFAR_10(Augmentator):
+class CGAN_RESNET_CIFAR_10(Augmentator):
     #Constantes:
     genWidth = 4
     genHeight = 4
@@ -45,7 +46,7 @@ class CGAN_CIFAR_10(Augmentator):
 
     ganEpochs = 100
     batchSize = 64
-    extraDiscEpochs = 5
+    extraDiscEpochs = 1
     generator = None
     discriminator = None
     gan = None
@@ -62,22 +63,8 @@ class CGAN_CIFAR_10(Augmentator):
         self.imgHeight = params.imgHeight
 
         self.params = params
-    
-    def AddBlock(self, inModel, nLayers: int, outDepth: int, kernelSize:int, firstLater:bool = False):
-        for i in range(nLayers):
-            if i == 0:
-                if(firstLater):
-                    model = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform')(inModel)
-                else:
-                    model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(inModel)
-                    model = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform')(model)
-            else:
-                model = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform')(model)
-            model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-        model = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides=2)(model)
-        model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-        model = layers.Dropout(self.dropoutParam)(model)
-        return model
+
+        self.resnetModel = ResNet152V2(input_shape = (self.imgWidth, self.imgHeight, 3), include_top = False)
     
     def AddBlockTranspose(self, inModel, nLayers: int, outDepth: int, kernelSize:int, firstLater:bool = False):
         for i in range(nLayers):
@@ -105,9 +92,9 @@ class CGAN_CIFAR_10(Augmentator):
         reshapedLabels = layers.Reshape((self.genWidth, self.genHeight, 1))(embeddedLabels)
         cgenX = layers.concatenate([cgenX, reshapedLabels])
 
-        model = self.AddBlockTranspose(cgenX, 2, 128, 4, True)
-        model = self.AddBlockTranspose(model, 2, 128, 4)
-        model = self.AddBlockTranspose(model, 2, 128, 4)
+        model = self.AddBlockTranspose(cgenX, 3, 128, 4, True)
+        model = self.AddBlockTranspose(model, 3, 128, 4)
+        model = self.AddBlockTranspose(model, 3, 128, 3)
 
         cgenOutput = Conv2D(filters=3, kernel_size=(3,3), padding='same', activation='tanh',  name = 'genOutput_img', kernel_initializer='glorot_uniform')(model)
         
@@ -119,21 +106,20 @@ class CGAN_CIFAR_10(Augmentator):
 
     #Cria model discriminadora com functional API
     def createDiscModel(self):
+        self.resnetModel.trainable = True
         discInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'discinput_img')
 
-        labelInput = keras.Input(shape=(1,), name = 'discinput_label')
-        embeddedLabels = layers.Embedding(self.nClasses, self.imgWidth*self.imgHeight)(labelInput)
-        reshapedLabels = layers.Reshape((self.imgWidth, self.imgHeight, 1))(embeddedLabels)
-        discX = layers.concatenate([discInput, reshapedLabels])
-
-        discX = self.AddBlock(discX, 2, 64, 3, True)
-        discX = self.AddBlock(discX, 2, 128, 3)
-        discX = self.AddBlock(discX, 2, 128, 3)
-        discX = self.AddBlock(discX, 1, 256, 3)
-
-        # camada densa
+        discX = self.resnetModel(discInput)
+        #discX = keras.layers.GlobalAveragePooling2D()(discX)
         discX = layers.Flatten()(discX)
 
+        labelInput = keras.Input(shape=(1,), name = 'discinput_label')
+        embeddedLabels = layers.Embedding(self.nClasses, 32)(labelInput)
+        embeddedLabels = layers.Flatten()(embeddedLabels)
+
+        discX = layers.concatenate([discX, embeddedLabels])
+        #discX = layers.BatchNormalization()(discX)
+        
         # nó de output, mapear em -1 ou 1
         discOutput = Dense(1, name = 'discoutput_realvsfake', kernel_initializer='glorot_uniform')(discX)
 
@@ -227,6 +213,8 @@ class CGAN_CIFAR_10(Augmentator):
                 self.saveModel(epoch-1, genLossHist, discLossHist)
                 sys.exit()
             for i in range(nBatches):
+                print("\r", end="")
+                print(('%.2f' % (i*100/nBatches)) + "%", end="")
                 for j in range(self.extraDiscEpochs):
                     imgBatch, labelBatch = dataset.getTrainData((i+j)*self.batchSize, (i+j+1)*self.batchSize)
                     

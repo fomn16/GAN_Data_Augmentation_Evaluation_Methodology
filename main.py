@@ -73,8 +73,8 @@ for fold in range(params.currentFold, params.kFold):
 
                 #cria testes
                 benchmarks : List[Benchmark] = []
-                benchmarks.extend(getBenchmarks(Benchmarks.CLASSIFIER, params))
                 benchmarks.extend(getBenchmarks(Benchmarks.TSNE_INCEPTION, params))
+                benchmarks.extend(getBenchmarks(Benchmarks.CLASSIFIER, params))
 
                 #percorre os testes
                 for benchmark in benchmarks:

@@ -11,6 +11,7 @@ from Modules.Benchmark.TSNE_INCEPTION import TSNE_INCEPTION
 from Modules.Augmentation.MNIST.CGAN_MNIST import CGAN_MNIST
 from Modules.Augmentation.CIFAR_10.CGAN_CIFAR_10 import CGAN_CIFAR_10
 from Modules.Augmentation.CIFAR_10.CGAN_CIFAR_10_Crossentropy import CGAN_CIFAR_10_Crossentropy
+from Modules.Augmentation.CIFAR_10.CGAN_RESNET_CIFAR_10 import CGAN_RESNET_CIFAR_10
 
 from Modules.Augmentation.MNIST.GAN_MNIST import GAN_MNIST
 from Modules.Augmentation.CIFAR_10.GAN_CIFAR_10 import GAN_CIFAR_10
@@ -47,7 +48,7 @@ def getAugmentators(augmentator, params:Params, extraParams = None, nameCompleme
         if(params.datasetName == Datasets.MNIST):
             return [CGAN_MNIST(params, extraParams, nameComplement)]
         if(params.datasetName == Datasets.CIFAR_10):
-            return [CGAN_CIFAR_10(params, extraParams, nameComplement)]#, CGAN_CIFAR_10_Crossentropy(params, extraParams, nameComplement)]
+            return [CGAN_CIFAR_10(params, extraParams, nameComplement)]#CGAN_RESNET_CIFAR_10(params, extraParams, nameComplement)]#, CGAN_CIFAR_10_Crossentropy(params, extraParams, nameComplement)]
     elif(augmentator == Augmentators.DIRECT):
         return [DATASET_DIRECTLY(params, extraParams, nameComplement)]
     elif(augmentator == Augmentators.MIXED):

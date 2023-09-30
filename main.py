@@ -54,8 +54,8 @@ for fold in range(params.currentFold, params.kFold):
         augmentators : List[Augmentator] = []
         #augmentators.extend(getAugmentators(Augmentators.GAN, params))
         augmentators.extend(getAugmentators(Augmentators.CGAN, params))
-        augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
-        augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,1}]))
+        #augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
+        #augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,1}]))
 
         loadedAugmentatorId = loadParam('current_augmentator_id', 0)
         for augmentator in augmentators[loadedAugmentatorId:]:

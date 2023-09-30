@@ -89,6 +89,8 @@ class TSNE_INCEPTION(Benchmark):
 
         low_dim_embeddings = tsne.fit_transform(embeddings)
 
+        #adicionar visualização trimap e mostrar global score dos dois
+
         gs = trimap.TRIMAP(verbose=False).global_score(embeddings, low_dim_embeddings)
 
         print("Trimap global score score: " + str(gs))

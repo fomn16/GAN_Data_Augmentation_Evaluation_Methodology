@@ -106,7 +106,7 @@ class CGAN_RESNET_CIFAR_10(Augmentator):
 
     #Cria model discriminadora com functional API
     def createDiscModel(self):
-        self.resnetModel.trainable = True
+        self.resnetModel.trainable = False
         discInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'discinput_img')
 
         discX = self.resnetModel(discInput)

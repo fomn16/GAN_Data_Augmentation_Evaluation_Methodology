@@ -26,7 +26,14 @@ def my_accuracy(y_true, y_pred):
     # Calculate the percentage of time with the same sign
     return tf.reduce_mean(tf.cast(sign_equal, tf.float32)) * 100.0
 
-class CGAN_CIFAR_10(Augmentator):
+def shuffle_no_repeat(imgs, lbls):
+    n = len(imgs)
+    shuffledIndices = np.random.permutation(n)
+    shuffledImgs = imgs[shuffledIndices]
+    shuffledLbls = lbls[shuffledIndices]
+    return shuffledImgs, shuffledLbls
+
+class AUGCGAN_CIFAR_10(Augmentator):
     #Constantes:
     genWidth = 4
     genHeight = 4
@@ -64,55 +71,79 @@ class CGAN_CIFAR_10(Augmentator):
 
         self.params = params
     
-    def AddBlock(self, inModel, nLayers: int, outDepth: int, kernelSize:int, firstLater:bool = False):
+    def AddTransposedBlock(self, model, nLayers: int, outDepth: int, kernelSize:int = 3):
         for i in range(nLayers):
             if i == 0:
-                if(firstLater):
-                    model = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform')(inModel)
-                else:
-                    model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(inModel)
-                    model = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform')(model)
+                model = Conv2DTranspose(filters=outDepth, kernel_size=kernelSize, padding='same', strides=(2,2), kernel_initializer='glorot_uniform')(model)
             else:
                 model = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform')(model)
+            model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
             model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-        model = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides=2)(model)
+        model = layers.Dropout(self.dropoutParam)(model)
+        return model
+    
+    def AddResidualBlock(self, model, nLayers:int, outDepth:int, kernelSize:int = 3, stride:int = 1):
+        identity = model
+        if(stride != 1):
+            identity = layers.AveragePooling2D(stride)(identity)
+        identity = Conv2D(filters=outDepth, kernel_size=1, padding='same', kernel_initializer='glorot_uniform')(identity)
+        identity = layers.LeakyReLU(alpha=self.leakyReluAlpha)(identity)
+
+        for i in range(nLayers):
+            model = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides = (stride if i == 0 else 1))(model)
+            model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
+            if(i != nLayers - 1):
+                model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
+
+        model = layers.add([model, identity])
         model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         model = layers.Dropout(self.dropoutParam)(model)
         return model
     
-    def AddBlockTranspose(self, inModel, nLayers: int, outDepth: int, kernelSize:int, firstLater:bool = False):
+    def AddTransposedResidualBlock(self, model, nLayers:int, outDepth:int, kernelSize:int = 3, stride:int = 1):
+        identity = model
+        if(stride != 1):
+            identity = layers.UpSampling2D(stride)(identity)
+        identity = Conv2D(filters=outDepth, kernel_size=1, padding='same', kernel_initializer='glorot_uniform')(identity)
+        identity = layers.LeakyReLU(alpha=self.leakyReluAlpha)(identity)
+
         for i in range(nLayers):
-            if i == 0:
-                if(firstLater):
-                    model = Conv2DTranspose(filters=outDepth, kernel_size=kernelSize, padding='same', strides=(2,2), kernel_initializer='glorot_uniform')(inModel)
-                else:
-                    model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(inModel)
-                    model = Conv2DTranspose(filters=outDepth, kernel_size=kernelSize, padding='same', strides=(2,2), kernel_initializer='glorot_uniform')(model)
-            else:
-                model = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform')(model)
-            model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
+            model = Conv2DTranspose(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides = (stride if i == 0 else 1))(model)
+            model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
+            if(i != nLayers - 1):
+                model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
+
+        model = layers.add([model, identity])
+        model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         model = layers.Dropout(self.dropoutParam)(model)
         return model
     
     #Cria model geradora com keras functional API
     def createGenModel(self):
-        cgenNoiseInput = keras.Input(shape=(self.noiseDim,), name = 'genInput_randomDistribution')
-
+        noise = keras.Input(shape=(self.noiseDim,), name = 'gen_input_gaussian_distribution')
         # Faz reshape para dimensões espaciais desejadas
-        cgenX = layers.Reshape((self.genWidth, self.genHeight, self.noiseDepth))(cgenNoiseInput)
+        X = layers.Reshape((self.genWidth, self.genHeight, self.noiseDepth))(noise)
     
-        labelInput = keras.Input(shape=(1,), name = 'genInput_label')
-        embeddedLabels= layers.Embedding(self.nClasses, self.genWidth*self.genHeight*2)(labelInput)
+        label = keras.Input(shape=(1,), name = 'gen_input_label')
+        embeddedLabels= layers.Embedding(self.nClasses, self.genWidth*self.genHeight*2)(label)
         reshapedLabels = layers.Reshape((self.genWidth, self.genHeight, 2))(embeddedLabels)
-        cgenX = layers.concatenate([cgenX, reshapedLabels])
+        X = layers.concatenate([X, reshapedLabels])
 
-        model = self.AddBlockTranspose(cgenX, 3, 64, 4, True)
-        model = self.AddBlockTranspose(model, 3, 128, 4)
-        model = self.AddBlockTranspose(model, 3, 256, 3)
+        X = self.AddTransposedBlock(X, 1, 32)
+        X = self.AddTransposedBlock(X, 1, 32)
+        X = self.AddTransposedBlock(X, 1, 3)
 
-        cgenOutput = Conv2D(filters=3, kernel_size=(3,3), padding='same', activation='tanh',  name = 'genOutput_img', kernel_initializer='glorot_uniform')(model)
+        imageInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'gen_input_img')
+
+        X = layers.concatenate([X, imageInput])
         
-        self.generator = keras.Model(inputs = [cgenNoiseInput, labelInput], outputs = cgenOutput, name = 'cgenerator')
+        X = self.AddResidualBlock(X, 2, 64, 3)
+        X = self.AddResidualBlock(X, 2, 128, 3)
+        X = self.AddResidualBlock(X, 2, 256, 3)
+
+        output = Conv2D(filters=3, kernel_size=(3,3), padding='same', activation='tanh',  name = 'gen_output', kernel_initializer='glorot_uniform')(X)
+        
+        self.generator = keras.Model(inputs = [noise, label, imageInput], outputs = output, name = 'generator')
 
         keras.utils.plot_model(
             self.generator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/generator.png')
@@ -120,27 +151,27 @@ class CGAN_CIFAR_10(Augmentator):
 
     #Cria model discriminadora com functional API
     def createDiscModel(self):
-        discInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'discinput_img')
+        img1 = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'disc_input_img_1')
+        img2 = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'disc_input_img_2')
 
-        labelInput = keras.Input(shape=(1,), name = 'discinput_label')
-        embeddedLabels = layers.Embedding(self.nClasses, self.imgWidth*self.imgHeight)(labelInput)
-        reshapedLabels = layers.Reshape((self.imgWidth, self.imgHeight, 1))(embeddedLabels)
-        discX = layers.concatenate([discInput, reshapedLabels])
+        label1 = keras.Input(shape=(1,), name = 'disc_input_label_1')
+        embeddedLabel1 = layers.Embedding(self.nClasses, self.imgWidth*self.imgHeight)(label1)
+        reshapedLabel1 = layers.Reshape((self.imgWidth, self.imgHeight, 1))(embeddedLabel1)
+        
+        label2 = keras.Input(shape=(1,), name = 'disc_input_label_2')
+        embeddedLabel2 = layers.Embedding(self.nClasses, self.imgWidth*self.imgHeight)(label2)
+        reshapedLabel2 = layers.Reshape((self.imgWidth, self.imgHeight, 1))(embeddedLabel2)
 
-        discX = self.AddBlock(discX, 2, 64, 3, True)
-        discX = self.AddBlock(discX, 2, 128, 3)
-        discX = self.AddBlock(discX, 2, 128, 3)
-        discX = self.AddBlock(discX, 1, 256, 3)
+        X = layers.concatenate([img1, img2, reshapedLabel1, reshapedLabel2])
 
-        # camada densa
-        #discX = layers.Flatten()(discX)
+        X = self.AddResidualBlock(X, 2, 64, 3, 2)
+        X = self.AddResidualBlock(X, 2, 128, 3, 2)
+        X = self.AddResidualBlock(X, 2, 128, 3, 2)
 
-        # nó de output, mapear em -1 ou 1
-        discX = Conv2D(1, 2, kernel_initializer='glorot_uniform', activation='linear')(discX)
-        discOutput = Flatten(name = 'discoutput_realvsfake')(discX)
-        #discOutput = Dense(1, name = 'discoutput_realvsfake', kernel_initializer='glorot_uniform')(discX)
+        X = Conv2D(1, 4, kernel_initializer='glorot_uniform', activation='linear')(X)
+        discOutput = Flatten(name = 'discoutput_realvsfake')(X)
 
-        self.discriminator = keras.Model(inputs = [discInput, labelInput], outputs = discOutput, name = 'discriminator')
+        self.discriminator = keras.Model(inputs = [img1, label1, img2, label2], outputs = discOutput, name = 'discriminator')
 
         keras.utils.plot_model(
             self.discriminator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/discriminator.png')
@@ -179,8 +210,9 @@ class CGAN_CIFAR_10(Augmentator):
         self.discriminator.trainable = False
         cganNoiseInput = Input(shape=(self.noiseDim,))
         cganLabelInput = Input(shape=(1,))
-        cganOutput =  self.discriminator([self.generator([cganNoiseInput, cganLabelInput]), cganLabelInput])
-        self.gan = Model((cganNoiseInput, cganLabelInput), cganOutput)
+        cganImgInput = Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels))
+        cganOutput =  self.discriminator([self.generator([cganNoiseInput, cganLabelInput, cganImgInput]), cganLabelInput, cganImgInput, cganLabelInput])
+        self.gan = Model((cganNoiseInput, cganLabelInput, cganImgInput), cganOutput)
 
         self.gan.compile(loss=wasserstein_loss, optimizer=self.optcGan)
         
@@ -208,8 +240,8 @@ class CGAN_CIFAR_10(Augmentator):
             genLossHist = loadParam(self.name + '_gen_loss_hist')
         else:
             #noise e labels de benchmark
-            benchNoise = np.random.uniform(-1,1, size=(256,self.noiseDim))
-            benchLabels = np.random.randint(0,self.nClasses, size = (256))
+            benchNoise = np.random.uniform(-1,1, size=(self.batchSize,self.noiseDim))
+            benchLabels = np.random.randint(0,self.nClasses, size = (self.batchSize))
             for i in range(20):
                 benchLabels[i] = int(i/2)
             startEpoch = -1
@@ -232,19 +264,25 @@ class CGAN_CIFAR_10(Augmentator):
             for i in range(nBatches):
                 for j in range(self.extraDiscEpochs):
                     imgBatch, labelBatch = dataset.getTrainData((i+j)*self.batchSize, (i+j+1)*self.batchSize)
+
+                    realImagesShuffled, realLabelsShuffled = shuffle_no_repeat(imgBatch, labelBatch)
+                    trueInstances = [realImagesShuffled, realLabelsShuffled, imgBatch, labelBatch]
                     
                     genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
-                    labelInput = np.random.randint(0,self.nClasses, size = (self.batchSize))
-                    #labelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in labelInput], dtype='float32')
+                    genImgOutput = self.generator.predict([genInput, labelBatch, imgBatch], verbose=0)
+                    generatedInstances = [imgBatch, labelBatch, genImgOutput, labelBatch]
                     
-                    genImgOutput = self.generator.predict([genInput, labelInput], verbose=0)
+                    XImg = np.concatenate((trueInstances[0],generatedInstances[0]))
+                    XLabel = np.concatenate((trueInstances[1], generatedInstances[1]))
+                    
+                    XImg2 = np.concatenate((trueInstances[2],generatedInstances[2]))
+                    XLabel2 = np.concatenate((trueInstances[3], generatedInstances[3]))
 
-                    XImg = np.concatenate((imgBatch, genImgOutput))
-                    XLabel = np.concatenate((labelBatch, labelInput))
                     y = ([-1] * self.batchSize) + ([1] * self.batchSize)
                     y = np.reshape(y, (-1,))
-                    (XImg, XLabel, y) = shuffle(XImg, XLabel, y)
-                    discLoss = self.discriminator.train_on_batch([XImg,XLabel], y)
+
+                    (XImg, XLabel, XImg2, XLabel2, y) = shuffle(XImg, XLabel, XImg2, XLabel2, y)
+                    discLoss = self.discriminator.train_on_batch([XImg,XLabel, XImg2, XLabel2], y)
 
                     for l in self.discriminator.layers:
                         weights = l.get_weights()
@@ -252,11 +290,10 @@ class CGAN_CIFAR_10(Augmentator):
                         l.set_weights(weights)
                 
                 genTrainNoise = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
-                genTrainClasses = np.random.randint(0,self.nClasses, size = (self.batchSize))
 
                 gentrainLbls = [-1]*(self.batchSize)
                 gentrainLbls = np.reshape(gentrainLbls, (-1,))
-                ganLoss = self.gan.train_on_batch([genTrainNoise, genTrainClasses],gentrainLbls)
+                ganLoss = self.gan.train_on_batch([genTrainNoise, labelBatch, imgBatch],gentrainLbls)
 
                 if i == nBatches-1:
                     discLossHist.append(discLoss)
@@ -267,9 +304,9 @@ class CGAN_CIFAR_10(Augmentator):
                     infoFile.write("Epoch " + str(epoch) + "\nCGAN (generator training) loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss)+ '\n')
                     infoFile.close()
 
-                    images = self.generator.predict([benchNoise, benchLabels])
+                    images = self.generator.predict([benchNoise, labelBatch, imgBatch])
                     out = ((images * 127.5) + 127.5).astype('uint8')
-                    showOutputAsImg(out, self.basePath + '/output_f' + str(self.currentFold) + '_e' + str(epoch) + '_' + '_'.join([str(a) for a in benchLabels[:20]]) + '.png', colored=True)
+                    showOutputAsImg(out, self.basePath + '/output_f' + str(self.currentFold) + '_e' + str(epoch) + '_' + '_'.join([str(a) for a in labelBatch[:20]]) + '.png', colored=True)
                     
                     plotLoss([[genLossHist, 'generator loss'],[discLossHist, 'discriminator loss']], self.basePath + '/trainPlot.png')
 

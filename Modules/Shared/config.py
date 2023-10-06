@@ -17,6 +17,7 @@ from Modules.Augmentation.MNIST.GAN_MNIST import GAN_MNIST
 from Modules.Augmentation.CIFAR_10.GAN_CIFAR_10 import GAN_CIFAR_10
 
 from Modules.Augmentation.SOP.GAN_SOP import GAN_SOP
+from Modules.Augmentation.SOP.CGAN_SOP import CGAN_SOP
 
 from Modules.Augmentation.DATASET_DIRECTLY import DATASET_DIRECTLY
 from Modules.Augmentation.MIXED import MIXED
@@ -48,7 +49,9 @@ def getAugmentators(augmentator, params:Params, extraParams = None, nameCompleme
         if(params.datasetName == Datasets.MNIST):
             return [CGAN_MNIST(params, extraParams, nameComplement)]
         if(params.datasetName == Datasets.CIFAR_10):
-            return [AUGCGAN_CIFAR_10(params, extraParams, nameComplement)]#CGAN_RESNET_CIFAR_10(params, extraParams, nameComplement)]#, CGAN_CIFAR_10_Crossentropy(params, extraParams, nameComplement)]
+            return [CGAN_CIFAR_10(params, extraParams, nameComplement)]#AUGCGAN_CIFAR_10(params, extraParams, nameComplement)]#CGAN_RESNET_CIFAR_10(params, extraParams, nameComplement)]#, CGAN_CIFAR_10_Crossentropy(params, extraParams, nameComplement)]
+        if(params.datasetName == Datasets.STANFORD_ONLINE):
+            return [CGAN_SOP(params, extraParams, nameComplement)]
     elif(augmentator == Augmentators.DIRECT):
         return [DATASET_DIRECTLY(params, extraParams, nameComplement)]
     elif(augmentator == Augmentators.MIXED):

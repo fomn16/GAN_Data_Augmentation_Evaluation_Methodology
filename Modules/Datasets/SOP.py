@@ -47,6 +47,7 @@ class STANFORD_ONLINE_PRODUCTS(Dataset):
             self.lastStart = start
             self.lastEnd = fullEnd
             self.lastQuery = test
+            print('\nfinished loading new dataset cache\n')
         
         imgs, lbls = self.data
         start = start - self.lastStart

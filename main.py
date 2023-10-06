@@ -36,9 +36,9 @@ else:
     params.continuing = True
 
 datasets : List[Dataset] = []
-datasets.append(CIFAR_10(params))
 #datasets.append(MNIST(params))
-#datasets.append(STANFORD_ONLINE_PRODUCTS(params))
+#datasets.append(CIFAR_10(params))
+datasets.append(STANFORD_ONLINE_PRODUCTS(params))
 
 for fold in range(params.currentFold, params.kFold):
     params.currentFold = fold

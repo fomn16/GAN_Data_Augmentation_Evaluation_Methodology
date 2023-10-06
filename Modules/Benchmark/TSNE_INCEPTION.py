@@ -86,16 +86,21 @@ class TSNE_INCEPTION(Benchmark):
         labels = np.concatenate((l[0], l[1]))
 
         tsne = TSNE(n_components=2, verbose=1, random_state=1602)
-
         low_dim_embeddings = tsne.fit_transform(embeddings)
 
-        #adicionar visualização trimap e mostrar global score dos dois
-
+        #calcula e imprime benchmarks sobre embeddings
+        
+        #global score
+        lde_dts = tsne.fit_transform(p[0])  #embeddings dataset
+        lde_gen = tsne.fit_transform(p[1])  #embeddings dados gerados
         gs = trimap.TRIMAP(verbose=False).global_score(embeddings, low_dim_embeddings)
-
-        print("Trimap global score score: " + str(gs))
+        gs_dts = trimap.TRIMAP(verbose=False).global_score(p[0], lde_dts)
+        gs_den = trimap.TRIMAP(verbose=False).global_score(p[1], lde_gen)
+        gs_comp = trimap.TRIMAP(verbose=False).global_score(p[0], lde_gen)
+        message = "Trimap gloal score.\n-combined embeddings: " + str(gs) + "\n-dataset embeddings: " + str(gs_dts) + "\n-generated image embeddings: " + str(gs_den) + "\n-comparative embeddings: " + str(gs_comp)
+        print(message)
         infoFile = open(self.basePath + '/info.txt', 'a')
-        infoFile.write("Trimap gloal score score for the embedding: " + str(gs))
+        infoFile.write(message)
         infoFile.close()
 
         del p

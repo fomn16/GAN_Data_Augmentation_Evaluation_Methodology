@@ -11,6 +11,7 @@ from Modules.Benchmark.TSNE_INCEPTION import TSNE_INCEPTION
 from Modules.Augmentation.MNIST.GAN_MNIST import GAN_MNIST
 from Modules.Augmentation.MNIST.CGAN_MNIST import CGAN_MNIST
 from Modules.Augmentation.MNIST.AUGCGAN_MNIST import AUGCGAN_MNIST
+from Modules.Augmentation.MNIST.WUNETCGAN_MNIST import WUNETCGAN_MNIST
 
 from Modules.Augmentation.CIFAR_10.GAN_CIFAR_10 import GAN_CIFAR_10
 from Modules.Augmentation.CIFAR_10.CGAN_CIFAR_10 import CGAN_CIFAR_10
@@ -48,7 +49,7 @@ def getAugmentators(augmentator, params:Params, extraParams = None, nameCompleme
             return [GAN_SOP(params, extraParams, nameComplement)]
     elif(augmentator == Augmentators.CGAN):
         if(params.datasetName == Datasets.MNIST):
-            return [AUGCGAN_MNIST(params, extraParams, nameComplement)]
+            return [WUNETCGAN_MNIST(params, extraParams, nameComplement)]
         if(params.datasetName == Datasets.CIFAR_10):
             return [CGAN_CIFAR_10(params, extraParams, nameComplement)]#AUGCGAN_CIFAR_10(params, extraParams, nameComplement)]#CGAN_RESNET_CIFAR_10(params, extraParams, nameComplement)]#, CGAN_CIFAR_10_Crossentropy(params, extraParams, nameComplement)]
         if(params.datasetName == Datasets.STANFORD_ONLINE):

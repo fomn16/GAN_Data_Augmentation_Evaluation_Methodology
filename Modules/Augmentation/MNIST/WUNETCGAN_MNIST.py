@@ -62,7 +62,7 @@ def shuffle_same_class(imgs, lbls, classes):
         classCount[currClass] += 1
     return imgOutput, lblOutput
 
-class AUGCGAN_MNIST(Augmentator):
+class WUNETCGAN_MNIST(Augmentator):
     #Constantes:
     genWidth = 7
     genHeight = 7
@@ -74,7 +74,7 @@ class AUGCGAN_MNIST(Augmentator):
 
     initLr = 2.5e-5
     leakyReluAlpha = 0.2
-    dropoutParam = 0.05
+    dropoutParam = 0.02
     batchNormMomentum = 0.8
     batchNormEpsilon = 2e-4
 
@@ -100,12 +100,46 @@ class AUGCGAN_MNIST(Augmentator):
 
         self.params = params
     
+    def AddUNet(self, model, channels, channelRatio=2):
+        shape = tf.shape(model)._inferred_value
+        spatialResolution = shape[-2]
+        #inputChannels = shape[-1]
+        ksize = 3 if spatialResolution > 3 else spatialResolution
+        downChannels = int(channels*channelRatio)
+
+        identity = model
+        #if(inputChannels != channels):
+        identity = Conv2D(filters=channels, kernel_size=1, padding='same', kernel_initializer='glorot_uniform')(identity)
+
+        model = Conv2D(filters=channels, kernel_size=ksize, padding='same', kernel_initializer='glorot_uniform')(model)
+        model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
+        model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
+        model = layers.Dropout(self.dropoutParam)(model)
+
+        if(spatialResolution%2==0):
+            down = Conv2D(filters=downChannels, kernel_size=ksize, padding='same', kernel_initializer='glorot_uniform', strides=2)(model)
+            down = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(down)
+            down = layers.LeakyReLU(alpha=self.leakyReluAlpha)(down)
+
+            ret = self.AddUNet(down, downChannels, channelRatio)
+            
+            up = Conv2DTranspose(filters=channels, kernel_size=ksize, padding='same', kernel_initializer='glorot_uniform', strides=2)(ret)
+            up = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(up)
+            up = layers.LeakyReLU(alpha=self.leakyReluAlpha)(up)
+
+            model = layers.concatenate([model, up])
+
+        model = Conv2D(filters=channels, kernel_size=ksize, padding='same', kernel_initializer='glorot_uniform')(model)
+        model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
+        model = layers.add([model, identity])
+        model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
+        return model
+
     def AddResidualBlock(self, model, nLayers:int, outDepth:int, kernelSize:int = 3, stride:int = 1):
         identity = model
         if(stride != 1):
             identity = layers.AveragePooling2D(stride)(identity)
         identity = Conv2D(filters=outDepth, kernel_size=1, padding='same', kernel_initializer='glorot_uniform')(identity)
-        identity = layers.LeakyReLU(alpha=self.leakyReluAlpha)(identity)
 
         for i in range(nLayers):
             model = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides = (stride if i == 0 else 1))(model)
@@ -118,22 +152,15 @@ class AUGCGAN_MNIST(Augmentator):
         model = layers.Dropout(self.dropoutParam)(model)
         return model
     
-    def AddTransposedResidualBlock(self, model, nLayers:int, outDepth:int, kernelSize:int = 3, stride:int = 1):
-        identity = model
-        if(stride != 1):
-            identity = layers.UpSampling2D(stride)(identity)
-        identity = Conv2D(filters=outDepth, kernel_size=1, padding='same', kernel_initializer='glorot_uniform')(identity)
-        identity = layers.LeakyReLU(alpha=self.leakyReluAlpha)(identity)
-
-        for i in range(nLayers):
-            model = Conv2DTranspose(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides = (stride if i == 0 else 1))(model)
-            model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
-            if(i != nLayers - 1):
-                model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-
-        model = layers.add([model, identity])
+    def AddTransposedBlock(self, model, nLayers: int, channels: int, kernelSize:int=3):
+        model = Conv2DTranspose(filters=channels, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides=2)(model)
+        model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
         model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         model = layers.Dropout(self.dropoutParam)(model)
+        for i in range(nLayers):
+            model = Conv2D(filters=channels, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform')(model)
+            model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
+            model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         return model
     
     #Cria model geradora com keras functional API
@@ -147,17 +174,16 @@ class AUGCGAN_MNIST(Augmentator):
         reshapedLabels = layers.Reshape((self.genWidth, self.genHeight, 1))(embeddedLabels)
         X = layers.concatenate([X, reshapedLabels])
 
-        X = self.AddTransposedResidualBlock(X, 2, 32, stride=2)
-        X = self.AddTransposedResidualBlock(X, 1, 1, stride=2)
+        X = self.AddTransposedBlock(X, 1, 8)
+        X = self.AddTransposedBlock(X, 1, 4)
 
         imageInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'gen_input_img')
 
         X = layers.concatenate([X, imageInput])
-        
-        X = self.AddResidualBlock(X, 2, 128)
-        X = self.AddResidualBlock(X, 2, 128)
 
-        output = Conv2D(filters=self.imgChannels, kernel_size=(3,3), padding='same', activation='tanh',  name = 'gen_output', kernel_initializer='glorot_uniform')(X)
+        X = self.AddUNet(X, 32, 1.5)
+
+        output = Conv2D(filters=self.imgChannels, kernel_size=1, padding='same', activation='tanh',  name = 'gen_output', kernel_initializer='glorot_uniform')(X)
         
         self.generator = keras.Model(inputs = [noise, label, imageInput], outputs = output, name = 'generator')
         self.generator.summary()
@@ -176,9 +202,8 @@ class AUGCGAN_MNIST(Augmentator):
 
         X = layers.concatenate([img1, img2, reshapedLabel])
 
-        X = self.AddResidualBlock(X, 2, 64, stride=2)
-        X = self.AddResidualBlock(X, 2, 64, stride=2)
-        X = self.AddResidualBlock(X, 2, 64)
+        X = self.AddResidualBlock(X, 1, 64, stride=2)
+        X = self.AddResidualBlock(X, 1, 64, stride=2)
 
         X = Conv2D(1, 7, kernel_initializer='glorot_uniform', activation='linear')(X)
         discOutput = Flatten(name = 'discoutput_realvsfake')(X)

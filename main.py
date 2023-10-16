@@ -1,6 +1,7 @@
 from Modules.Shared.helper import *
 from Modules.Shared.config import *
 from Modules.Datasets.MNIST import MNIST
+from Modules.Datasets.MNIST_UNBALANCED import MNIST_UNBALANCED
 from Modules.Datasets.CIFAR_10 import CIFAR_10
 from Modules.Datasets.SOP import STANFORD_ONLINE_PRODUCTS
 from Modules.Shared.Saving import *
@@ -36,8 +37,8 @@ else:
     params.continuing = True
 
 datasets : List[Dataset] = []
-datasets.append(MNIST(params))
-#datasets.append(CIFAR_10(params))
+#datasets.append(MNIST(params))
+datasets.append(CIFAR_10(params))
 #datasets.append(STANFORD_ONLINE_PRODUCTS(params))
 
 for fold in range(params.currentFold, params.kFold):

@@ -66,7 +66,6 @@ class WUNETCGAN_MNIST(Augmentator):
     #Constantes:
     genWidth = 7
     genHeight = 7
-    embeddingDims = 32
 
     approximateNoiseDim = 100
     noiseDepth = int(np.ceil(approximateNoiseDim/(genWidth*genHeight)))
@@ -100,45 +99,10 @@ class WUNETCGAN_MNIST(Augmentator):
 
         self.params = params
     
-    def AddUNet(self, model, channels, channelRatio=2):
-        shape = tf.shape(model)._inferred_value
-        spatialResolution = shape[-2]
-        #inputChannels = shape[-1]
-        ksize = 3 if spatialResolution > 3 else spatialResolution
-        downChannels = int(channels*channelRatio)
-
-        identity = model
-        #if(inputChannels != channels):
-        identity = Conv2D(filters=channels, kernel_size=1, padding='same', kernel_initializer='glorot_uniform')(identity)
-
-        model = Conv2D(filters=channels, kernel_size=ksize, padding='same', kernel_initializer='glorot_uniform')(model)
-        model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
-        model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-        model = layers.Dropout(self.dropoutParam)(model)
-
-        if(spatialResolution%2==0):
-            down = Conv2D(filters=downChannels, kernel_size=ksize, padding='same', kernel_initializer='glorot_uniform', strides=2)(model)
-            down = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(down)
-            down = layers.LeakyReLU(alpha=self.leakyReluAlpha)(down)
-
-            ret = self.AddUNet(down, downChannels, channelRatio)
-            
-            up = Conv2DTranspose(filters=channels, kernel_size=ksize, padding='same', kernel_initializer='glorot_uniform', strides=2)(ret)
-            up = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(up)
-            up = layers.LeakyReLU(alpha=self.leakyReluAlpha)(up)
-
-            model = layers.concatenate([model, up])
-
-        model = Conv2D(filters=channels, kernel_size=ksize, padding='same', kernel_initializer='glorot_uniform')(model)
-        model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
-        model = layers.add([model, identity])
-        model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-        return model
-
     def AddResidualBlock(self, model, nLayers:int, outDepth:int, kernelSize:int = 3, stride:int = 1):
         identity = model
         if(stride != 1):
-            identity = layers.AveragePooling2D(stride)(identity)
+            identity = layers.MaxPooling2D(stride)(identity)
         identity = Conv2D(filters=outDepth, kernel_size=1, padding='same', kernel_initializer='glorot_uniform')(identity)
 
         for i in range(nLayers):
@@ -146,10 +110,10 @@ class WUNETCGAN_MNIST(Augmentator):
             model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
             if(i != nLayers - 1):
                 model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-
+        
+        model = layers.Dropout(self.dropoutParam)(model)
         model = layers.add([model, identity])
         model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-        model = layers.Dropout(self.dropoutParam)(model)
         return model
     
     def AddTransposedBlock(self, model, nLayers: int, channels: int, kernelSize:int=3):
@@ -161,6 +125,26 @@ class WUNETCGAN_MNIST(Augmentator):
             model = Conv2D(filters=channels, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform')(model)
             model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
             model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
+        return model
+    
+    def AddUNet(self, model, channels, channelRatio=2, nBlocks = 1):
+        shape = tf.shape(model)._inferred_value
+        spatialResolution = shape[-2]
+        ksize = 3 if spatialResolution > 3 else spatialResolution
+        downChannels = int(channels*channelRatio)
+
+        model = self.AddResidualBlock(model, nBlocks, channels, ksize)
+
+        if(spatialResolution%2==0):
+            down = layers.MaxPooling2D(2)(model)
+
+            ret = self.AddUNet(down, downChannels, channelRatio)
+            
+            up = self.AddTransposedBlock(ret, 0, channels, ksize)
+
+            model = layers.concatenate([model, up])
+
+        model = self.AddResidualBlock(model, nBlocks, channels, ksize)
         return model
     
     #Cria model geradora com keras functional API
@@ -202,8 +186,9 @@ class WUNETCGAN_MNIST(Augmentator):
 
         X = layers.concatenate([img1, img2, reshapedLabel])
 
-        X = self.AddResidualBlock(X, 1, 64, stride=2)
-        X = self.AddResidualBlock(X, 1, 64, stride=2)
+        X = self.AddResidualBlock(X, 2, 64, stride=2)
+        X = self.AddResidualBlock(X, 2, 64, stride=2)
+        X = self.AddResidualBlock(X, 2, 64)
 
         X = Conv2D(1, 7, kernel_initializer='glorot_uniform', activation='linear')(X)
         discOutput = Flatten(name = 'discoutput_realvsfake')(X)
@@ -362,7 +347,6 @@ class WUNETCGAN_MNIST(Augmentator):
         print(self.name + ": started data generation")
         genInput = np.random.uniform(-1,1,size=(nEntries,self.noiseDim))
         genLabelInput = np.random.randint(0,self.nClasses, size = (nEntries))
-        #genLabelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in genLabelInput], dtype='float32')
 
         if(self.generator is None):
             self.compile()

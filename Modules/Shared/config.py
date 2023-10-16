@@ -16,7 +16,7 @@ from Modules.Augmentation.MNIST.WUNETCGAN_MNIST import WUNETCGAN_MNIST
 from Modules.Augmentation.CIFAR_10.GAN_CIFAR_10 import GAN_CIFAR_10
 from Modules.Augmentation.CIFAR_10.CGAN_CIFAR_10 import CGAN_CIFAR_10
 from Modules.Augmentation.CIFAR_10.CGAN_CIFAR_10_Crossentropy import CGAN_CIFAR_10_Crossentropy
-from Modules.Augmentation.CIFAR_10.AUGCGAN_CIFAR_10 import AUGCGAN_CIFAR_10
+from Modules.Augmentation.CIFAR_10.WUNETCGAN_CIFAR_10 import WUNETCGAN_CIFAR_10
 
 from Modules.Augmentation.SOP.GAN_SOP import GAN_SOP
 from Modules.Augmentation.SOP.CGAN_SOP import CGAN_SOP
@@ -51,7 +51,7 @@ def getAugmentators(augmentator, params:Params, extraParams = None, nameCompleme
         if(params.datasetName == Datasets.MNIST):
             return [WUNETCGAN_MNIST(params, extraParams, nameComplement)]
         if(params.datasetName == Datasets.CIFAR_10):
-            return [CGAN_CIFAR_10(params, extraParams, nameComplement)]#AUGCGAN_CIFAR_10(params, extraParams, nameComplement)]#CGAN_RESNET_CIFAR_10(params, extraParams, nameComplement)]#, CGAN_CIFAR_10_Crossentropy(params, extraParams, nameComplement)]
+            return [WUNETCGAN_CIFAR_10(params, extraParams, nameComplement)]#CGAN_RESNET_CIFAR_10(params, extraParams, nameComplement)]#, CGAN_CIFAR_10_Crossentropy(params, extraParams, nameComplement)]
         if(params.datasetName == Datasets.STANFORD_ONLINE):
             return [CGAN_SOP(params, extraParams, nameComplement)]
     elif(augmentator == Augmentators.DIRECT):

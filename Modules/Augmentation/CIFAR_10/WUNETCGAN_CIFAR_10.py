@@ -116,6 +116,25 @@ class WUNETCGAN_CIFAR_10(Augmentator):
         model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         return model
     
+    def AddInceptionBlock(self, model, nLayers:int, outDepth:int, stride:int = 1):
+        for i in range(nLayers):
+            identity = model
+            if(stride != 1 and i == 0):
+                identity = layers.MaxPooling2D(stride)(identity)
+            identity = Conv2D(filters=outDepth, kernel_size=1, padding='same', kernel_initializer='glorot_uniform')(identity)
+            paths = [identity]
+
+            for kernelSize in [3, 5, 7]: 
+                path = model
+                path = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides = (stride if i == 0 else 1))(path)
+                path = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(path)
+                path = layers.Dropout(self.dropoutParam)(path)
+                paths.append(path)
+
+            model = layers.add(paths)
+            model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
+        return model
+    
     def AddTransposedBlock(self, model, nLayers: int, channels: int, kernelSize:int=3):
         model = Conv2DTranspose(filters=channels, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides=2)(model)
         model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
@@ -133,7 +152,7 @@ class WUNETCGAN_CIFAR_10(Augmentator):
         ksize = 3 if spatialResolution > 3 else spatialResolution
         downChannels = int(channels*channelRatio)
 
-        model = self.AddResidualBlock(model, nBlocks, channels, ksize)
+        model = self.AddResidualBlock(model, nBlocks, channels, kernelSize=ksize)
 
         if(spatialResolution%2==0 and spatialResolution>self.genWidth):
             down = layers.MaxPooling2D(2)(model)
@@ -144,7 +163,7 @@ class WUNETCGAN_CIFAR_10(Augmentator):
 
             model = layers.concatenate([model, up])
 
-        model = self.AddResidualBlock(model, nBlocks, channels, ksize)
+        model = self.AddResidualBlock(model, nBlocks, channels, kernelSize=ksize)
         return model
     
     #Cria model geradora com keras functional API
@@ -158,15 +177,15 @@ class WUNETCGAN_CIFAR_10(Augmentator):
         reshapedLabels = layers.Reshape((self.genWidth, self.genHeight, 1))(embeddedLabels)
         X = layers.concatenate([X, reshapedLabels])
 
-        X = self.AddTransposedBlock(X, 1, 16)
-        X = self.AddTransposedBlock(X, 1, 16)
+        X = self.AddTransposedBlock(X, 1, 32)
+        X = self.AddTransposedBlock(X, 1, 32)
         X = self.AddTransposedBlock(X, 1, 6)
 
         imageInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'gen_input_img')
 
         X = layers.concatenate([X, imageInput])
 
-        X = self.AddUNet(X, 32, 1.4, 2)
+        X = self.AddUNet(X, 32, 1.5, 3)
 
         output = Conv2D(filters=self.imgChannels, kernel_size=1, padding='same', activation='tanh',  name = 'gen_output', kernel_initializer='glorot_uniform')(X)
         
@@ -187,10 +206,9 @@ class WUNETCGAN_CIFAR_10(Augmentator):
 
         X = layers.concatenate([img1, img2, reshapedLabel])
 
-        X = self.AddResidualBlock(X, 2, 64, stride=2, kernelSize=4)
-        X = self.AddResidualBlock(X, 2, 64, stride=2, kernelSize=4)
-        X = self.AddResidualBlock(X, 2, 64, stride=2)
-        X = self.AddResidualBlock(X, 2, 128)
+        X = self.AddInceptionBlock(X, 2, 64, stride=2)
+        X = self.AddInceptionBlock(X, 2, 64, stride=2)
+        X = self.AddInceptionBlock(X, 2, 64, stride=2)
 
         X = Conv2D(1, 4, kernel_initializer='glorot_uniform', activation='linear')(X)
         discOutput = Flatten(name = 'discoutput_realvsfake')(X)

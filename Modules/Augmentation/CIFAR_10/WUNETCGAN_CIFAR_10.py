@@ -54,12 +54,43 @@ def shuffle_same_class(imgs, lbls, classes):
 
     classCount = [0]*classes
     imgOutput = np.ndarray(imgs.shape, imgs.dtype)
-    lblOutput = np.copy(lbls)
 
     for i in range(lbls.shape[0]):
         currClass = lbls[i]
         imgOutput[i] = sortedImgs[classLocations[currClass] + classCount[currClass]]
         classCount[currClass] += 1
+    return imgOutput
+
+def shuffle_different_class(imgs, lbls, classes):
+    n = lbls.shape[0]
+    indices = np.argsort(lbls)
+
+    sortedImgs = imgs[indices]
+    sortedLbls = lbls[indices]
+
+    lstLbl = sortedLbls[0]
+    lstLblId = 0
+    classLocations = [0]*classes
+    nClass = [0]*classes
+    classLocations[sortedLbls[0]] = 0
+
+    for i in range(n):
+        nClass[sortedLbls[i]] += 1
+        if(sortedLbls[i] != lstLbl):
+            classLocations[sortedLbls[i]] = i
+            lstLbl = sortedLbls[i]
+            sortedImgs[lstLblId:i-1], sortedLbls[lstLblId:i-1] = shuffle_no_repeat(sortedImgs[lstLblId:i-1], sortedLbls[lstLblId:i-1])
+            lstLblId = i
+    sortedImgs[lstLblId:], sortedLbls[lstLblId:] = shuffle_no_repeat(sortedImgs[lstLblId:], sortedLbls[lstLblId:])
+
+    imgOutput = np.ndarray(imgs.shape, imgs.dtype)
+    lblOutput = np.ndarray(lbls.shape, lbls.dtype)
+
+    for i in range(n):
+        currClass = lbls[i]
+        indexPick = (np.random.randint(n-nClass[currClass]) + nClass[currClass] + classLocations[currClass])%n
+        imgOutput[i] = sortedImgs[indexPick]
+        lblOutput[i] = sortedLbls[indexPick]
     return imgOutput, lblOutput
 
 class WUNETCGAN_CIFAR_10(Augmentator):
@@ -71,7 +102,7 @@ class WUNETCGAN_CIFAR_10(Augmentator):
     noiseDepth = int(np.ceil(approximateNoiseDim/(genWidth*genHeight)))
     noiseDim = genWidth*genHeight*noiseDepth
 
-    initLr = 1e-4
+    initLr = 2e-5
     leakyReluAlpha = 0.2
     dropoutParam = 0.02
     batchNormMomentum = 0.8
@@ -81,7 +112,7 @@ class WUNETCGAN_CIFAR_10(Augmentator):
 
     ganEpochs = 100
     batchSize = 64
-    extraDiscEpochs = 5
+    extraDiscEpochs = 1
     generator = None
     discriminator = None
     gan = None
@@ -99,7 +130,7 @@ class WUNETCGAN_CIFAR_10(Augmentator):
 
         self.params = params
     
-    def AddResidualBlock(self, model, nLayers:int, outDepth:int, kernelSize:int = 3, stride:int = 1):
+    def ResidualBlock(self, model, nLayers:int, outDepth:int, kernelSize:int = 3, stride:int = 1):
         identity = model
         if(stride != 1):
             identity = layers.MaxPooling2D(stride)(identity)
@@ -112,11 +143,11 @@ class WUNETCGAN_CIFAR_10(Augmentator):
                 model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         
         model = layers.Dropout(self.dropoutParam)(model)
-        model = layers.add([model, identity])
+        model = layers.concatenate([model, identity])
         model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         return model
     
-    def AddInceptionBlock(self, model, nLayers:int, outDepth:int, stride:int = 1):
+    def InceptionBlock(self, model, nLayers:int, outDepth:int, stride:int = 1):
         for i in range(nLayers):
             identity = model
             if(stride != 1 and i == 0):
@@ -135,7 +166,7 @@ class WUNETCGAN_CIFAR_10(Augmentator):
             model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         return model
     
-    def AddTransposedBlock(self, model, nLayers: int, channels: int, kernelSize:int=3):
+    def TransposedBlock(self, model, nLayers: int, channels: int, kernelSize:int=3):
         model = Conv2DTranspose(filters=channels, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides=2)(model)
         model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
         model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
@@ -146,24 +177,24 @@ class WUNETCGAN_CIFAR_10(Augmentator):
             model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         return model
     
-    def AddUNet(self, model, channels, channelRatio=2, nBlocks = 1):
+    def UNet(self, model, channels, channelRatio=2, nBlocks = 1):
         shape = tf.shape(model)._inferred_value
         spatialResolution = shape[-2]
         ksize = 3 if spatialResolution > 3 else spatialResolution
         downChannels = int(channels*channelRatio)
 
-        model = self.AddResidualBlock(model, nBlocks, channels, kernelSize=ksize)
+        model = self.ResidualBlock(model, nBlocks, channels, kernelSize=ksize)
 
         if(spatialResolution%2==0 and spatialResolution>self.genWidth):
             down = layers.MaxPooling2D(2)(model)
 
-            ret = self.AddUNet(down, downChannels, channelRatio)
+            ret = self.UNet(down, downChannels, channelRatio)
             
-            up = self.AddTransposedBlock(ret, 0, channels, ksize)
+            up = self.TransposedBlock(ret, 0, channels, ksize)
 
             model = layers.concatenate([model, up])
 
-        model = self.AddResidualBlock(model, nBlocks, channels, kernelSize=ksize)
+        model = self.ResidualBlock(model, nBlocks, channels, kernelSize=ksize)
         return model
     
     #Cria model geradora com keras functional API
@@ -177,15 +208,15 @@ class WUNETCGAN_CIFAR_10(Augmentator):
         reshapedLabels = layers.Reshape((self.genWidth, self.genHeight, 1))(embeddedLabels)
         X = layers.concatenate([X, reshapedLabels])
 
-        X = self.AddTransposedBlock(X, 1, 32)
-        X = self.AddTransposedBlock(X, 1, 32)
-        X = self.AddTransposedBlock(X, 1, 6)
+        X = self.TransposedBlock(X, 1, 32)
+        X = self.TransposedBlock(X, 1, 32)
+        X = self.TransposedBlock(X, 1, 6)
 
         imageInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'gen_input_img')
 
         X = layers.concatenate([X, imageInput])
 
-        X = self.AddUNet(X, 32, 1.5, 3)
+        X = self.UNet(X, 32, 1.5, 4)
 
         output = Conv2D(filters=self.imgChannels, kernel_size=1, padding='same', activation='tanh',  name = 'gen_output', kernel_initializer='glorot_uniform')(X)
         
@@ -200,20 +231,24 @@ class WUNETCGAN_CIFAR_10(Augmentator):
         img1 = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'disc_input_img_1')
         img2 = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'disc_input_img_2')
 
-        label = keras.Input(shape=(1,), name = 'disc_input_label')
-        embeddedLabel = layers.Embedding(self.nClasses, self.imgWidth*self.imgHeight)(label)
-        reshapedLabel = layers.Reshape((self.imgWidth, self.imgHeight, 1))(embeddedLabel)
+        label1 = keras.Input(shape=(1,), name = 'disc_input_label_1')
+        embeddedLabel1 = layers.Embedding(self.nClasses, self.imgWidth*self.imgHeight)(label1)
+        reshapedLabel1 = layers.Reshape((self.imgWidth, self.imgHeight, 1))(embeddedLabel1)
 
-        X = layers.concatenate([img1, img2, reshapedLabel])
+        label2 = keras.Input(shape=(1,), name = 'disc_input_label_2')
+        embeddedLabel2 = layers.Embedding(self.nClasses, self.imgWidth*self.imgHeight)(label2)
+        reshapedLabel2 = layers.Reshape((self.imgWidth, self.imgHeight, 1))(embeddedLabel2)
 
-        X = self.AddInceptionBlock(X, 2, 64, stride=2)
-        X = self.AddInceptionBlock(X, 2, 64, stride=2)
-        X = self.AddInceptionBlock(X, 2, 64, stride=2)
+        X = layers.concatenate([img1, img2, reshapedLabel1, reshapedLabel2])
+
+        X = self.InceptionBlock(X, 2, 32, stride=2)
+        X = self.InceptionBlock(X, 2, 32, stride=2)
+        X = self.InceptionBlock(X, 2, 32, stride=2)
 
         X = Conv2D(1, 4, kernel_initializer='glorot_uniform', activation='linear')(X)
         discOutput = Flatten(name = 'discoutput_realvsfake')(X)
 
-        self.discriminator = keras.Model(inputs = [img1, img2, label], outputs = discOutput, name = 'discriminator')
+        self.discriminator = keras.Model(inputs = [img1, img2, label1, label2], outputs = discOutput, name = 'discriminator')
         self.discriminator.summary()
         keras.utils.plot_model(
             self.discriminator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/discriminator.png')
@@ -253,7 +288,7 @@ class WUNETCGAN_CIFAR_10(Augmentator):
         cganNoiseInput = Input(shape=(self.noiseDim,))
         cganLabelInput = Input(shape=(1,))
         cganImgInput = Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels))
-        cganOutput =  self.discriminator([self.generator([cganNoiseInput, cganLabelInput, cganImgInput]), cganImgInput, cganLabelInput])
+        cganOutput =  self.discriminator([self.generator([cganNoiseInput, cganLabelInput, cganImgInput]), cganImgInput, cganLabelInput, cganLabelInput])
         self.gan = Model((cganNoiseInput, cganLabelInput, cganImgInput), cganOutput)
 
         self.gan.compile(loss=wasserstein_loss, optimizer=self.optcGan)
@@ -307,20 +342,22 @@ class WUNETCGAN_CIFAR_10(Augmentator):
                 for j in range(self.extraDiscEpochs):
                     imgBatch, labelBatch = dataset.getTrainData((i+j)*self.batchSize, (i+j+1)*self.batchSize)
 
-                    realImagesShuffled, realLabelsShuffled = shuffle_same_class(imgBatch, labelBatch, self.nClasses)
-                    
-                    genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
-                    fakeImgs = self.generator.predict([genInput, labelBatch, imgBatch], verbose=0)
-                    
-                    XImg = np.concatenate((realImagesShuffled, fakeImgs))
-                    XImg2 = np.concatenate((imgBatch, imgBatch))
-                    XLabel = np.concatenate((labelBatch, labelBatch))
+                    imgsShuffled = shuffle_same_class(imgBatch, labelBatch, self.nClasses)
+                    imgsWrongClass, lblsWrongClass = shuffle_different_class(imgBatch, labelBatch, self.nClasses)
 
-                    y = ([-1] * self.batchSize) + ([1] * self.batchSize)
+                    genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
+                    imgsFake = self.generator.predict([genInput, labelBatch, imgBatch], verbose=0)
+                    
+                    XImg    = np.concatenate((imgsShuffled, imgsFake, imgsWrongClass))
+                    XImg2   = np.concatenate((imgBatch, imgBatch, imgBatch))
+                    XLabel  = np.concatenate((labelBatch, labelBatch, lblsWrongClass))
+                    XLabel2 = np.concatenate((labelBatch, labelBatch, labelBatch))
+
+                    y = ([-1] * self.batchSize) + ([1] * self.batchSize) + ([1] * self.batchSize)
                     y = np.reshape(y, (-1,))
 
-                    (XImg, XImg2, XLabel, y) = shuffle(XImg, XImg2, XLabel, y)
-                    discLoss = self.discriminator.train_on_batch([XImg, XImg2, XLabel], y)
+                    (XImg, XImg2, XLabel, XLabel2, y) = shuffle(XImg, XImg2, XLabel, XLabel2, y)
+                    discLoss = self.discriminator.train_on_batch([XImg, XImg2, XLabel, XLabel2], y)
 
                     for l in self.discriminator.layers:
                         weights = l.get_weights()

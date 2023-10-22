@@ -112,7 +112,7 @@ class WUNETCGAN_CIFAR_10(Augmentator):
 
     ganEpochs = 100
     batchSize = 64
-    extraDiscEpochs = 1
+    extraDiscEpochs = 2
     generator = None
     discriminator = None
     gan = None
@@ -142,8 +142,8 @@ class WUNETCGAN_CIFAR_10(Augmentator):
             if(i != nLayers - 1):
                 model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         
-        model = layers.Dropout(self.dropoutParam)(model)
-        model = layers.concatenate([model, identity])
+        #model = layers.Dropout(self.dropoutParam)(model)
+        model = layers.add([model, identity])
         model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         return model
     
@@ -170,7 +170,7 @@ class WUNETCGAN_CIFAR_10(Augmentator):
         model = Conv2DTranspose(filters=channels, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides=2)(model)
         model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
         model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-        model = layers.Dropout(self.dropoutParam)(model)
+        #model = layers.Dropout(self.dropoutParam)(model)
         for i in range(nLayers):
             model = Conv2D(filters=channels, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform')(model)
             model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
@@ -185,7 +185,7 @@ class WUNETCGAN_CIFAR_10(Augmentator):
 
         model = self.ResidualBlock(model, nBlocks, channels, kernelSize=ksize)
 
-        if(spatialResolution%2==0 and spatialResolution>self.genWidth):
+        if(spatialResolution%2==0 and spatialResolution>=self.genWidth):
             down = layers.MaxPooling2D(2)(model)
 
             ret = self.UNet(down, downChannels, channelRatio)
@@ -208,15 +208,15 @@ class WUNETCGAN_CIFAR_10(Augmentator):
         reshapedLabels = layers.Reshape((self.genWidth, self.genHeight, 1))(embeddedLabels)
         X = layers.concatenate([X, reshapedLabels])
 
-        X = self.TransposedBlock(X, 1, 32)
-        X = self.TransposedBlock(X, 1, 32)
-        X = self.TransposedBlock(X, 1, 6)
+        X = self.TransposedBlock(X, 2, 32)
+        X = self.TransposedBlock(X, 2, 32)
+        X = self.TransposedBlock(X, 2, 6)
 
         imageInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'gen_input_img')
 
         X = layers.concatenate([X, imageInput])
 
-        X = self.UNet(X, 32, 1.5, 4)
+        X = self.UNet(X, 32, 1.5, 3)
 
         output = Conv2D(filters=self.imgChannels, kernel_size=1, padding='same', activation='tanh',  name = 'gen_output', kernel_initializer='glorot_uniform')(X)
         

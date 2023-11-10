@@ -24,6 +24,9 @@ from Modules.Augmentation.SOP.CGAN_SOP import CGAN_SOP
 from Modules.Augmentation.DATASET_DIRECTLY import DATASET_DIRECTLY
 from Modules.Augmentation.MIXED import MIXED
 
+from Modules.Augmentation.Augmentator import Augmentator
+from Modules.Benchmark.Benchmark import Benchmark
+
 class Datasets:
     MNIST = "mnist"
     CIFAR_10 = "cifar10"
@@ -40,34 +43,36 @@ class Benchmarks:
     TSNE_INCEPTION = "tsne_inception"
 
 def getAugmentators(augmentator, params:Params, extraParams = None, nameComplement = "") -> List[Augmentator]:
+    name = params.datasetNameComplement + "_" +  nameComplement
     if(augmentator == Augmentators.GAN):
         if(params.datasetName == Datasets.MNIST):
-            return [GAN_MNIST(params, extraParams, nameComplement)]
+            return [GAN_MNIST(params, extraParams, name)]
         if(params.datasetName == Datasets.CIFAR_10):
-            return [GAN_CIFAR_10(params, extraParams, nameComplement)]
+            return [GAN_CIFAR_10(params, extraParams, name)]
         if(params.datasetName == Datasets.STANFORD_ONLINE):
-            return [GAN_SOP(params, extraParams, nameComplement)]
+            return [GAN_SOP(params, extraParams, name)]
     elif(augmentator == Augmentators.CGAN):
         if(params.datasetName == Datasets.MNIST):
-            return [WUNETCGAN_MNIST(params, extraParams, nameComplement)]
+            return [WUNETCGAN_MNIST(params, extraParams, name)]
         if(params.datasetName == Datasets.CIFAR_10):
-            return [WUNETCGAN_CIFAR_10(params, extraParams, nameComplement)]#CGAN_RESNET_CIFAR_10(params, extraParams, nameComplement)]#, CGAN_CIFAR_10_Crossentropy(params, extraParams, nameComplement)]
+            return [WUNETCGAN_CIFAR_10(params, extraParams, name)]#CGAN_RESNET_CIFAR_10(params, extraParams, name)]#, CGAN_CIFAR_10_Crossentropy(params, extraParams, name)]
         if(params.datasetName == Datasets.STANFORD_ONLINE):
-            return [CGAN_SOP(params, extraParams, nameComplement)]
+            return [CGAN_SOP(params, extraParams, name)]
     elif(augmentator == Augmentators.DIRECT):
-        return [DATASET_DIRECTLY(params, extraParams, nameComplement)]
+        return [DATASET_DIRECTLY(params, extraParams, name)]
     elif(augmentator == Augmentators.MIXED):
-        return [MIXED(params, extraParams, nameComplement)]
+        return [MIXED(params, extraParams, name)]
     return [None]
 
 def getBenchmarks(benchmark, params: Params, nameComplement = "") -> List[Benchmark]:
+    name = params.datasetNameComplement + "_" + nameComplement
     if(benchmark == Benchmarks.CLASSIFIER):
         if(params.datasetName == Datasets.MNIST):
-            return [Classifier_MNIST(params)]
+            return [Classifier_MNIST(params, name)]
         if(params.datasetName == Datasets.CIFAR_10):
-            return [Classifier_CIFAR(params)]
+            return [Classifier_CIFAR(params, name)]
         if(params.datasetName == Datasets.STANFORD_ONLINE):
-            return [Classifier_SOP(params)]
+            return [Classifier_SOP(params, name)]
     elif(benchmark == Benchmarks.TSNE_INCEPTION):
-            return [TSNE_INCEPTION(params)]
+            return [TSNE_INCEPTION(params, name)]
     return [None]

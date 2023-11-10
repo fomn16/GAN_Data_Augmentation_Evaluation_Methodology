@@ -11,6 +11,7 @@ class Params:
     imgHeight = None
     dataDir = None
     datasetName = None
+    datasetNameComplement = None
     runtime = None
     saveModels = None
     continuing = None

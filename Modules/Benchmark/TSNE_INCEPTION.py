@@ -9,6 +9,11 @@ from keras.applications.inception_v3 import InceptionV3
 from sklearn.manifold import TSNE
 import trimap
 
+from Modules.Datasets.Dataset import Dataset
+from Modules.Augmentation.Augmentator import Augmentator
+from Modules.Benchmark.Benchmark import Benchmark
+from Modules.Shared.Params import Params
+
 class TSNE_INCEPTION(Benchmark):
     nClasses = 10
     enlargedWidth = 84
@@ -17,7 +22,7 @@ class TSNE_INCEPTION(Benchmark):
     inceptionBatchSize = 250
 
     def __init__(self, params: Params, nameComplement = ""):
-        self.name = self.__class__.__name__ + nameComplement
+        self.name = self.__class__.__name__ + "_" +  nameComplement
 
         self.nClasses = params.nClasses
         self.basePath = verifiedFolder('runtime_' + params.runtime + '/trainingStats/' + self.name + '/fold_' + str(params.currentFold))

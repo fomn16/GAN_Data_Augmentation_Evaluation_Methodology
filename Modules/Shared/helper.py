@@ -24,12 +24,7 @@ import tensorflow as tf
 import sys
 from keras import backend as K
 import pickle
-sys.path.insert(1, '../../')
 
-from Modules.Datasets.Dataset import Dataset
-from Modules.Augmentation.Augmentator import Augmentator
-from Modules.Benchmark.Benchmark import Benchmark
-from Modules.Shared.Params import Params
 '''
 pip install tensorflow==2.10 tensorflow-addons==0.20.0 scikit-learn pandas ipython pillow matplotlib tensorflow_datasets==4.8.3 imgaug seaborn pydot
 '''
@@ -160,3 +155,66 @@ def load_pickle(file_path):
     with open(file_path, 'rb') as f:
         data = pickle.load(f)
     return data
+
+def LoadDataset(name, with_info,as_supervised,data_dir,nameComplement,sliceNames, transformationFunction = None, filterFunction = None):
+    outputDir = f'{data_dir}/{name}_{nameComplement}_tfrecords'
+    
+    dataset, _ = tfds.load(name=name, with_info=with_info, as_supervised=as_supervised, data_dir=data_dir)
+    train = dataset[sliceNames[0]]
+    test = dataset[sliceNames[1]]
+
+    retData = None
+
+    #se o dataset ainda não foi criado
+    if not os.path.exists(outputDir):
+        alteredTrain = train
+        alteredTest = test
+        if(transformationFunction != None):
+            alteredTrain = train.map(transformationFunction)
+            alteredTest = test.map(transformationFunction)
+        
+        train = list(alteredTrain.as_numpy_iterator())
+        test  = list(alteredTest.as_numpy_iterator())
+        train.extend(test)
+
+        imgs = np.array([i[0] for i in train])
+        lbls = np.array([i[1] for i in train])
+
+        if(filterFunction != None):
+            imgs, lbls = filterFunction(imgs, lbls)
+            
+        imgs = imgs.astype('float')
+        imgs = (imgs - 127.5) / 127.5
+        retData = imgs, lbls
+        dataset = tf.data.Dataset.from_tensor_slices(retData)
+        
+        dataset.save(verifiedFolder(outputDir))
+    else:
+        dataset = tf.data.Dataset.load(verifiedFolder(outputDir))
+        imgs = []
+        lbls = []
+        for i in dataset:
+            imgs.append(i[0])
+            lbls.append(i[1])
+        imgs, lbls = np.array(imgs), np.array(lbls)
+        retData = imgs, lbls
+    return retData
+
+def unbalance(imgs, lbls, minClassInstances, nClasses):
+    tempCounter = [0]*nClasses
+    for i in range(len(lbls)):
+        tempCounter[lbls[i]] += 1
+    maxClassInstances = np.max(tempCounter)
+    coeff = (maxClassInstances - minClassInstances)/(nClasses-1)
+    unbalancedImgs = []
+    unbalancedLbls = []
+    counter = [0]*nClasses
+    for i in range(len(lbls)):
+        id = lbls[i]
+        if(counter[id] <= (id*coeff + minClassInstances)):
+            unbalancedImgs.append(imgs[i])
+            unbalancedLbls.append(lbls[i])
+            counter[id] += 1
+    unbalancedImgs = np.array(unbalancedImgs)
+    unbalancedLbls = np.array(unbalancedLbls)
+    return unbalancedImgs, unbalancedLbls

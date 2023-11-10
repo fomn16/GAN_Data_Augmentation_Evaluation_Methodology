@@ -5,6 +5,11 @@ from Modules.Datasets.MNIST_UNBALANCED import MNIST_UNBALANCED
 from Modules.Datasets.CIFAR_10 import CIFAR_10
 from Modules.Datasets.SOP import STANFORD_ONLINE_PRODUCTS
 from Modules.Shared.Saving import *
+
+from Modules.Datasets.Dataset import Dataset
+from Modules.Augmentation.Augmentator import Augmentator
+from Modules.Benchmark.Benchmark import Benchmark
+
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
@@ -37,24 +42,25 @@ else:
     params.continuing = True
 
 datasets : List[Dataset] = []
-#datasets.append(MNIST(params))
-datasets.append(CIFAR_10(params))
+
+datasets.append(MNIST(params))
+datasets.append(MNIST_UNBALANCED(params))
+#datasets.append(CIFAR_10(params))
 #datasets.append(STANFORD_ONLINE_PRODUCTS(params))
 
 for fold in range(params.currentFold, params.kFold):
     params.currentFold = fold
     saveParam('params_currentFold', params.currentFold)
-
     loadedDatasetId = loadParam('current_dataset_id', 0)
+
     for dataset in datasets[loadedDatasetId:]:
         saveParam('current_dataset_id', loadedDatasetId)
         loadedDatasetId+=1
-
-        dataset.loadParams()
+        dataset.load()
 
         augmentators : List[Augmentator] = []
-        #augmentators.extend(getAugmentators(Augmentators.GAN, params))
-        augmentators.extend(getAugmentators(Augmentators.CGAN, params))
+        augmentators.extend(getAugmentators(Augmentators.GAN, params))
+        #augmentators.extend(getAugmentators(Augmentators.CGAN, params))
         #augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
         #augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,1}]))
 
@@ -62,9 +68,9 @@ for fold in range(params.currentFold, params.kFold):
         for augmentator in augmentators[loadedAugmentatorId:]:
             saveParam('current_augmentator_id', loadedAugmentatorId)
             loadedAugmentatorId+=1
-            if(augmentator != None):
 
-                #treinando
+            if(augmentator != None):
+                #treina
                 augmentator.compile()
                 augmentator.train(dataset)
 
@@ -82,5 +88,7 @@ for fold in range(params.currentFold, params.kFold):
                     if(benchmark != None):
                         benchmark.train(augmentator, dataset)
                         benchmark.runTest(dataset)
+
         saveParam('current_augmentator_id', 0)
+        dataset.unload()
     saveParam('current_dataset_id', 0)

@@ -3,6 +3,10 @@ sys.path.insert(1, '../../')
 from Modules.Shared.helper import *
 from Modules.Shared.Saving import *
 
+from Modules.Datasets.Dataset import Dataset
+from Modules.Augmentation.Augmentator import Augmentator
+from Modules.Shared.Params import Params
+
 def wasserstein_loss(y_true, y_pred):
     y_true = tf.cast(y_true, y_pred.dtype)#K.cast(y_true, dtype=tf.float32)
     return -K.mean(y_true * y_pred)
@@ -118,7 +122,7 @@ class WUNETCGAN_CIFAR_10(Augmentator):
     gan = None
 
     def __init__(self, params: Params, extraParams = None, nameComplement = ""):
-        self.name = self.__class__.__name__ + nameComplement
+        self.name = self.__class__.__name__ + "_" +  nameComplement
 
         self.currentFold = params.currentFold
         self.nClasses = params.nClasses
@@ -245,7 +249,7 @@ class WUNETCGAN_CIFAR_10(Augmentator):
         X = self.InceptionBlock(X, 2, 32, stride=2)
         X = self.InceptionBlock(X, 2, 32, stride=2)
 
-        X = Conv2D(1, 4, kernel_initializer='glorot_uniform', activation='linear')(X)
+        X = Conv2D(1, 4, kernel_initializer='glorot_uniform', activation='linear')(X) ##quando utilizar a saída multiclasse, testar usar softmax
         discOutput = Flatten(name = 'discoutput_realvsfake')(X)
 
         self.discriminator = keras.Model(inputs = [img1, img2, label1, label2], outputs = discOutput, name = 'discriminator')

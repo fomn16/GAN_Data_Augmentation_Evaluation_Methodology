@@ -3,6 +3,10 @@ sys.path.insert(1, '../../')
 from Modules.Shared.helper import *
 from Modules.Shared.Params import Params
 
+from Modules.Datasets.Dataset import Dataset
+from Modules.Augmentation.Augmentator import Augmentator
+from Modules.Benchmark.Benchmark import Benchmark
+
 class Classifier_MNIST(Benchmark):
     #constantes
     leakyReluAlpha = 0.2
@@ -12,7 +16,7 @@ class Classifier_MNIST(Benchmark):
     batchSize = 128
 
     def __init__(self, params: Params, nameComplement = ""):
-        self.name = self.__class__.__name__ + nameComplement
+        self.name = self.__class__.__name__ + "_" +  nameComplement
 
         self.nClasses = params.nClasses
         self.basePath = verifiedFolder('runtime_' + params.runtime + '/trainingStats/' + self.name)

@@ -3,6 +3,8 @@ sys.path.insert(1, '../../')
 from Modules.Shared.helper import *
 from Modules.Shared.Params import Params
 
+from Modules.Datasets.Dataset import Dataset
+
 #imgs => [w][h][-1,1], lbls => [0,1]
 class Augmentator:
     name = None

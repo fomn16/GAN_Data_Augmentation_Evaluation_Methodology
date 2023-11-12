@@ -5,21 +5,17 @@ from Modules.Shared.helper import *
 
 from Modules.Benchmark.Classifier.Classifier_MNIST import Classifier_MNIST
 from Modules.Benchmark.Classifier.Classifier_CIFAR import Classifier_CIFAR
-from Modules.Benchmark.Classifier.Classifier_SOP import Classifier_SOP
 from Modules.Benchmark.TSNE_INCEPTION import TSNE_INCEPTION
 
-from Modules.Augmentation.MNIST.GAN_MNIST import GAN_MNIST
-from Modules.Augmentation.MNIST.CGAN_MNIST import CGAN_MNIST
-from Modules.Augmentation.MNIST.AUGCGAN_MNIST import AUGCGAN_MNIST
-from Modules.Augmentation.MNIST.WUNETCGAN_MNIST import WUNETCGAN_MNIST
+from Modules.Augmentation.GAN.GAN_MNIST import GAN_MNIST
+from Modules.Augmentation.CGAN.CGAN_MNIST import CGAN_MNIST
+from Modules.Augmentation.WCGAN.WCGAN_MNIST import WCGAN_MNIST
+from Modules.Augmentation.WUNETCGAN.WUNETCGAN_MNIST import WUNETCGAN_MNIST
 
-from Modules.Augmentation.CIFAR_10.GAN_CIFAR_10 import GAN_CIFAR_10
-from Modules.Augmentation.CIFAR_10.CGAN_CIFAR_10 import CGAN_CIFAR_10
-from Modules.Augmentation.CIFAR_10.CGAN_CIFAR_10_Crossentropy import CGAN_CIFAR_10_Crossentropy
-from Modules.Augmentation.CIFAR_10.WUNETCGAN_CIFAR_10 import WUNETCGAN_CIFAR_10
-
-from Modules.Augmentation.SOP.GAN_SOP import GAN_SOP
-from Modules.Augmentation.SOP.CGAN_SOP import CGAN_SOP
+from Modules.Augmentation.GAN.GAN_CIFAR_10 import GAN_CIFAR_10
+from Modules.Augmentation.CGAN.CGAN_CIFAR_10 import CGAN_CIFAR_10
+from Modules.Augmentation.WCGAN.WCGAN_CIFAR_10 import WCGAN_CIFAR_10
+from Modules.Augmentation.WUNETCGAN.WUNETCGAN_CIFAR_10 import WUNETCGAN_CIFAR_10
 
 from Modules.Augmentation.DATASET_DIRECTLY import DATASET_DIRECTLY
 from Modules.Augmentation.MIXED import MIXED
@@ -30,11 +26,13 @@ from Modules.Benchmark.Benchmark import Benchmark
 class Datasets:
     MNIST = "mnist"
     CIFAR_10 = "cifar10"
-    STANFORD_ONLINE = "stanford_online_products"
+    GTSRB = "visual_domain_decathlon/vgg-flowers"
 
 class Augmentators:
     GAN = "gan"
     CGAN = "cgan"
+    WCGAN = "wcgan"
+    WUNETCGAN = "wunetcgan"
     DIRECT = "dataset_directly"
     MIXED = "mixed"
 
@@ -49,18 +47,26 @@ def getAugmentators(augmentator, params:Params, extraParams = None, nameCompleme
             return [GAN_MNIST(params, extraParams, name)]
         if(params.datasetName == Datasets.CIFAR_10):
             return [GAN_CIFAR_10(params, extraParams, name)]
-        if(params.datasetName == Datasets.STANFORD_ONLINE):
-            return [GAN_SOP(params, extraParams, name)]
-    elif(augmentator == Augmentators.CGAN):
+    if(augmentator == Augmentators.CGAN):
+        if(params.datasetName == Datasets.MNIST):
+            return [CGAN_MNIST(params, extraParams, name)]
+        if(params.datasetName == Datasets.CIFAR_10):
+            return [CGAN_CIFAR_10(params, extraParams, name)]
+    if(augmentator == Augmentators.WCGAN):
+        if(params.datasetName == Datasets.MNIST):
+            return [WCGAN_MNIST(params, extraParams, name)]
+        if(params.datasetName == Datasets.CIFAR_10):
+            return [WCGAN_CIFAR_10(params, extraParams, name)]
+    if(augmentator == Augmentators.WUNETCGAN):
         if(params.datasetName == Datasets.MNIST):
             return [WUNETCGAN_MNIST(params, extraParams, name)]
         if(params.datasetName == Datasets.CIFAR_10):
-            return [WUNETCGAN_CIFAR_10(params, extraParams, name)]#CGAN_RESNET_CIFAR_10(params, extraParams, name)]#, CGAN_CIFAR_10_Crossentropy(params, extraParams, name)]
-        if(params.datasetName == Datasets.STANFORD_ONLINE):
-            return [CGAN_SOP(params, extraParams, name)]
-    elif(augmentator == Augmentators.DIRECT):
+            return [WUNETCGAN_CIFAR_10(params, extraParams, name)]
+        if(params.datasetName == Datasets.GTSRB):
+            return [WUNETCGAN_CIFAR_10(params, extraParams, name)]
+    if(augmentator == Augmentators.DIRECT):
         return [DATASET_DIRECTLY(params, extraParams, name)]
-    elif(augmentator == Augmentators.MIXED):
+    if(augmentator == Augmentators.MIXED):
         return [MIXED(params, extraParams, name)]
     return [None]
 
@@ -71,8 +77,6 @@ def getBenchmarks(benchmark, params: Params, nameComplement = "") -> List[Benchm
             return [Classifier_MNIST(params, name)]
         if(params.datasetName == Datasets.CIFAR_10):
             return [Classifier_CIFAR(params, name)]
-        if(params.datasetName == Datasets.STANFORD_ONLINE):
-            return [Classifier_SOP(params, name)]
     elif(benchmark == Benchmarks.TSNE_INCEPTION):
             return [TSNE_INCEPTION(params, name)]
     return [None]

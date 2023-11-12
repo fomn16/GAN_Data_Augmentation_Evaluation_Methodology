@@ -1,32 +1,52 @@
 import sys
 sys.path.insert(1, '../../')
 from Modules.Shared.helper import *
+from Modules.Shared.Saving import *
 
 from Modules.Datasets.Dataset import Dataset
-from Modules.Augmentation.Augmentator import Augmentator
 from Modules.Shared.Params import Params
 
-class GAN_SOP(Augmentator):
-    #Constantes:
-    genWidth = 4
-    genHeight = 4
-    genDepth = 128
+from Modules.Augmentation.GANFramework import GANFramework
 
-    noiseDim = 100
-    genFCOutputDim = 1024
-    discFCOutputDim = 2048
+class GAN(GANFramework):
+    def loadConstants(self):
+        self.genWidth = 4
+        self.genHeight = 4
+        self.genDepth = 128
 
-    initLr = 2e-4
-    leakyReluAlpha = 0.2
-    l2RegParam = 0.01
-    dropoutParam = 0.05
+        self.noiseDim = 100
+        self.genFCOutputDim = 1024
+        self.discFCOutputDim = 2048
 
-    ganEpochs = 100
-    batchSize = 64
+        self.initLr = 2e-4
+        self.leakyReluAlpha = 0.2
+        self.l2RegParam = 0.01
+        self.dropoutParam = 0.05
+        self.batchNormMomentum = 0.8
+        self.batchNormEpsilon = 2e-4
 
-    generator = None
-    discriminator = None
-    gan = None
+        self.ganEpochs = 100
+        self.batchSize = 64
+
+        self.generator = None
+        self.discriminator = None
+        self.gan = None
+        raise ValueError("GAN.loadConstants must be overriten") 
+    
+    def genUpscale(self, model):
+        model = self.TransposedBlock(model, 1, 128, kernel_regularizer=regularizers.l2(self.l2RegParam))
+        model = self.TransposedBlock(model, 1, 128, kernel_regularizer=regularizers.l2(self.l2RegParam))
+        model = self.TransposedBlock(model, 1, 128, kernel_regularizer=regularizers.l2(self.l2RegParam))
+        raise ValueError("GAN.genUpscale must be overriten") 
+        return model
+    
+    def discDownscale(self, model):
+        model = self.Block(model, 1, 64, kernel_regularizer=regularizers.l2(self.l2RegParam))
+        model = self.Block(model, 1, 128, kernel_regularizer=regularizers.l2(self.l2RegParam))
+        model = self.Block(model, 1, 256, kernel_regularizer=regularizers.l2(self.l2RegParam))
+        model = self.Block(model, 1, 256, kernel_regularizer=regularizers.l2(self.l2RegParam))
+        raise ValueError("GAN.discDownscale must be overriten") 
+        return model
 
     def __init__(self, params: Params, extraParams = None, nameComplement = ""):
         self.name = self.__class__.__name__ + "_" +  nameComplement
@@ -41,27 +61,8 @@ class GAN_SOP(Augmentator):
 
         self.params = params
 
-    def AddBlock(self, inModel, nLayers: int, outDepth: int):
-        for i in range(nLayers):
-            if i == 0:
-                model = layers.Conv2D(filters=outDepth, kernel_size=(3,3), padding='same', kernel_regularizer=regularizers.l2(self.l2RegParam))(inModel)
-            else:
-                 model = layers.Conv2D(filters=outDepth, kernel_size=(3,3), padding='same', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
-            model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-            model = layers.Dropout(self.dropoutParam)(model)
-        model = layers.MaxPool2D(pool_size=(2,2), padding='valid', strides=(2,2))(model)
-        return model
-    
-    def AddBlockTranspose(self, inModel, nLayers: int, outDepth: int):
-        for i in range(nLayers):
-            if i == 0:
-                model = layers.Conv2DTranspose(filters=outDepth, kernel_size=(3,3), padding='same', strides=(2,2), kernel_regularizer=regularizers.l2(self.l2RegParam))(inModel)
-            else:
-                model = layers.Conv2DTranspose(filters=outDepth, kernel_size=(3,3), padding='same', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
-            model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-            model = layers.Dropout(self.dropoutParam)(model)
-        return model
-    
+        self.loadConstants()
+
     #Cria model geradora com keras functional API
     def createGenModel(self):
         genInput = keras.Input(shape=(self.noiseDim,), name = 'geninput_randomdistribution')
@@ -82,18 +83,11 @@ class GAN_SOP(Augmentator):
 
         # Faz reshape para dimensões espaciais desejadas
         genX = layers.Reshape((self.genWidth, self.genHeight, self.genDepth))(genX)
-
-        model = self.AddBlockTranspose(genX, 1, 128)
-
-        model = self.AddBlockTranspose(model, 1, 128)
-
-        model = self.AddBlockTranspose(model, 1, 128)
-
-        model = self.AddBlockTranspose(model, 1, 128)
+        model = self.genUpscale(genX)
 
         # camada convolucional que tem como output a imagem de saída
         # tanh é usado pois é necessária saída de espaço limitado
-        genOutput = layers.Conv2D(filters=3, kernel_size=(3,3), padding='same', activation='tanh',  name = 'genOutput_img', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
+        genOutput = layers.Conv2D(filters=self.imgChannels, kernel_size=(3,3), padding='same', activation='tanh',  name = 'genOutput_img', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
 
         self.generator = keras.Model(inputs = genInput, outputs = [genOutput, labelOutput], name = 'generator')
         
@@ -105,11 +99,8 @@ class GAN_SOP(Augmentator):
     def createDiscModel(self):
         discInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'discinput_img')
 
-        discX = self.AddBlock(discInput, 1, 64)
-        discX = self.AddBlock(discX, 1, 128)
-        discX = self.AddBlock(discX, 1, 256)
-        discX = self.AddBlock(discX, 1, 256)
-        discX = self.AddBlock(discX, 1, 256)
+        discX = self.discDownscale(discInput)
+
         discX = layers.BatchNormalization(axis=-1)(discX)
 
         # camada densa
@@ -124,7 +115,6 @@ class GAN_SOP(Augmentator):
         discX = layers.Dense(self.discFCOutputDim)(discX)
         discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
         discX = layers.Dropout(self.dropoutParam)(discX)
-        #discX = layers.BatchNormalization(axis=-1)(discX)
 
         # nó de output, sigmoid->mapear em 0 ou 1
         discOutput = layers.Dense(1, activation='sigmoid', name = 'discoutput_realvsfake')(discX)
@@ -137,31 +127,70 @@ class GAN_SOP(Augmentator):
 
     #compilando discriminador e gan
     def compile(self):
-        optDiscr = Adam(learning_rate = self.initLr/2, beta_1 = 0.5)
-        self.createDiscModel()
-        self.discriminator.compile(loss='binary_crossentropy', optimizer=optDiscr)
+        epochPath = self.basePath + '/modelSaves/fold_' + str(self.currentFold) + '/epoch_' + str(loadParam(self.name + '_current_epoch'))
 
+        
+        self.createDiscModel()
         self.createGenModel()
+
+        if(self.params.continuing):
+            self.discriminator.load_weights(verifiedFolder(epochPath + '/disc_weights'))
+            self.generator.load_weights(verifiedFolder(epochPath + '/gen_weights'))
+            self.optDiscr = Adam(learning_rate = loadParam(self.name + '_disc_opt_lr'), beta_1=0.5)
+            self.optGan  = Adam(learning_rate = loadParam(self.name + '_gan_opt_lr'),  beta_1=0.5)
+        else:
+            self.optDiscr = Adam(learning_rate = self.initLr/2, beta_1 = 0.5)
+            self.optGan  = Adam(learning_rate=self.initLr, beta_1=0.5)
+
+        self.discriminator.compile(loss='binary_crossentropy', optimizer=self.optDiscr)
+
         self.discriminator.trainable = False
         input = Input(shape=(self.noiseDim,))
         output = self.discriminator(self.generator(input))
         self.gan = Model(input, output)
 
-        optGan = Adam(learning_rate=self.initLr, beta_1=0.5)
-        self.gan.compile(loss= 'binary_crossentropy', optimizer=optGan)
+        self.gan.compile(loss= 'binary_crossentropy', optimizer=self.optGan)
 
         keras.utils.plot_model(
             self.gan, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/gan.png')
         )
 
+        if(not self.params.continuing):
+            self.saveModel()
+
     #treinamento GAN
     def train(self, dataset:Dataset):
-        benchNoise = np.random.uniform(-1,1, size=(256,self.noiseDim))
-        genLossHist = []
         discLossHist = []
+        genLossHist = []
+        benchNoise = None
+        benchLabels = None
+        startEpoch = None
+        if(self.params.continuing):
+            benchNoise = np.array(loadParam(self.name + '_bench_noise'))
+            benchLabels = np.array(loadParam(self.name + '_bench_labels'))
+            startEpoch = loadParam(self.name + '_current_epoch')
+            discLossHist = loadParam(self.name + '_disc_loss_hist')
+            genLossHist = loadParam(self.name + '_gen_loss_hist')
+        else:
+            #noise e labels de benchmark
+            benchNoise = np.random.uniform(-1,1, size=(256,self.noiseDim))
+            benchLabels = np.random.randint(0,self.nClasses, size = (256))
+            for i in range(20):
+                benchLabels[i] = int(i/2)
+            startEpoch = -1
+            saveParam(self.name + '_bench_noise', benchNoise.tolist())
+            saveParam(self.name + '_bench_labels', benchLabels.tolist())
+            saveParam(self.name + '_current_epoch', 0)
+            saveParam(self.name + '_disc_loss_hist', [])
+            saveParam(self.name + '_gen_loss_hist', [])
 
-        for epoch in range(self.ganEpochs):
-            nBatches = int(dataset.trainInstances/self.batchSize)
+        nBatches = int(dataset.trainInstances/self.batchSize)
+
+        for epoch in range(startEpoch+1, self.ganEpochs):
+            if(loadParam('close') == True):
+                saveParam('close', False)
+                self.saveModel(epoch-1, genLossHist, discLossHist)
+                sys.exit()
             for i in range(nBatches):
                 imgBatch, labelBatch = dataset.getTrainData(i*self.batchSize, (i+1)*self.batchSize)
                 labelBatch = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in labelBatch], dtype='float32')
@@ -190,22 +219,21 @@ class GAN_SOP(Augmentator):
 
                     images, labels = self.generator.predict(benchNoise)
                     out = ((images * 127.5) + 127.5).astype('uint8')
-                    showOutputAsImg(out, self.basePath + '/output_f' + str(self.currentFold) + '_e' + str(epoch) + '_' + '_'.join([str(a.argmax()) for a in labels[:20]]) + '.png', colored=True)
+                    showOutputAsImg(out, self.basePath + '/output_f' + str(self.currentFold) + '_e' + str(epoch) + '_' + '_'.join([str(a.argmax()) for a in labels[:20]]) + '.png', colored=(self.imgChannels>1))
                     plotLoss([[genLossHist, 'generator loss'],[discLossHist, 'discriminator loss']], self.basePath + '/trainPlot.png')
-            if(epoch%5 == 0 or epoch == self.ganEpochs-1):
-                epochPath = self.basePath + '/modelSaves/fold_' + str(self.currentFold) + '/epoch_' + str(epoch)
-                self.generator.save(verifiedFolder(epochPath + '/gen'))
-                self.discriminator.save(verifiedFolder(epochPath + '/disc'))
-                self.gan.save(verifiedFolder(epochPath + '/gan'))
+                    
+            if((self.params.saveModels and epoch%5 == 0) or epoch == self.ganEpochs-1):
+                self.saveModel(epoch, genLossHist, discLossHist)
 
     #Gera e salva imagens
     def saveGenerationExample(self, nEntries=20):
         noise = np.random.uniform(-1,1, size=(nEntries,self.noiseDim))
         images, labels = self.generator.predict(noise)
         out = ((images * 127.5) + 127.5).astype('uint8')
-        showOutputAsImg(out, self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a.argmax()) for a in labels]) + '.png',nEntries, colored=True)
+        showOutputAsImg(out, self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a.argmax()) for a in labels]) + '.png',nEntries, colored=(self.imgChannels>1))
 
-    def generate(self, nEntries):
+    def generate(self, srcImgs, srcLbls):
+        nEntries = srcLbls.shape[0]
         print(self.name + ": started data generation")
         genInput = np.random.uniform(-1,1,size=(nEntries,self.noiseDim))
         genImg, genLbl = self.generator.predict(genInput, verbose=0)

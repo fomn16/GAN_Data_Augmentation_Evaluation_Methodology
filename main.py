@@ -1,9 +1,12 @@
 from Modules.Shared.helper import *
 from Modules.Shared.config import *
+
 from Modules.Datasets.MNIST import MNIST
 from Modules.Datasets.MNIST_UNBALANCED import MNIST_UNBALANCED
 from Modules.Datasets.CIFAR_10 import CIFAR_10
-from Modules.Datasets.SOP import STANFORD_ONLINE_PRODUCTS
+from Modules.Datasets.CIFAR_10_UNBALANCED import CIFAR_10_UNBALANCED
+from Modules.Datasets.GTSRB import GTSRB
+
 from Modules.Shared.Saving import *
 
 from Modules.Datasets.Dataset import Dataset
@@ -42,11 +45,11 @@ else:
     params.continuing = True
 
 datasets : List[Dataset] = []
-
-datasets.append(MNIST(params))
-datasets.append(MNIST_UNBALANCED(params))
+datasets.append(GTSRB(params))
+#datasets.append(MNIST(params))
 #datasets.append(CIFAR_10(params))
-#datasets.append(STANFORD_ONLINE_PRODUCTS(params))
+#datasets.append(MNIST_UNBALANCED(params))
+#datasets.append(CIFAR_10_UNBALANCED(params))
 
 for fold in range(params.currentFold, params.kFold):
     params.currentFold = fold
@@ -59,8 +62,10 @@ for fold in range(params.currentFold, params.kFold):
         dataset.load()
 
         augmentators : List[Augmentator] = []
-        augmentators.extend(getAugmentators(Augmentators.GAN, params))
+        #augmentators.extend(getAugmentators(Augmentators.GAN, params))
         #augmentators.extend(getAugmentators(Augmentators.CGAN, params))
+        #augmentators.extend(getAugmentators(Augmentators.WCGAN, params))
+        augmentators.extend(getAugmentators(Augmentators.WUNETCGAN, params))
         #augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
         #augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,1}]))
 
@@ -80,7 +85,7 @@ for fold in range(params.currentFold, params.kFold):
 
                 #cria testes
                 benchmarks : List[Benchmark] = []
-                benchmarks.extend(getBenchmarks(Benchmarks.TSNE_INCEPTION, params))
+                #benchmarks.extend(getBenchmarks(Benchmarks.TSNE_INCEPTION, params))
                 benchmarks.extend(getBenchmarks(Benchmarks.CLASSIFIER, params))
 
                 #percorre os testes

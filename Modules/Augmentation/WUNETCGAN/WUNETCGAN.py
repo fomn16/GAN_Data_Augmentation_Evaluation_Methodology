@@ -1,125 +1,55 @@
 import sys
 sys.path.insert(1, '../../')
 from Modules.Shared.helper import *
-from Modules.Shared.Saving import *
 
 from Modules.Datasets.Dataset import Dataset
-from Modules.Augmentation.Augmentator import Augmentator
 from Modules.Shared.Params import Params
 
-def wasserstein_loss(y_true, y_pred):
-    y_true = tf.cast(y_true, y_pred.dtype)#K.cast(y_true, dtype=tf.float32)
-    return -K.mean(y_true * y_pred)
+from Modules.Augmentation.GANFramework import *
 
-def my_distance(y_true, y_pred):
-    #input range is [-1,1]
-    y_true = tf.cast(y_true, y_pred.dtype)  # Ensure the same data type
-    return tf.reduce_mean(tf.abs(y_true - y_pred))
+class WUNETCGAN(GANFramework):
+    def loadConstants(self):
+        self.genWidth = 4
+        self.genHeight = 4
 
-def my_accuracy(y_true, y_pred):
-    #input range is [-1,1]
-    y_true = tf.cast(y_true, y_pred.dtype)  # Ensure the same data type
+        approximateNoiseDim = 100
+        self.noiseDepth = int(np.ceil(approximateNoiseDim/(self.genWidth*self.genHeight)))
+        self.noiseDim = self.genWidth*self.genHeight*self.noiseDepth
+
+        self.initLr = 2e-5
+        self.leakyReluAlpha = 0.2
+        self.dropoutParam = 0.02
+        self.batchNormMomentum = 0.8
+        self.batchNormEpsilon = 2e-4
+
+        self.clipValue = 0.01
+
+        self.ganEpochs = 100
+        self.batchSize = 64
+        self.extraDiscEpochs = 2
+        self.generator = None
+        self.discriminator = None
+        self.gan = None
+
+        self.uNetChannels = 32
+        self.uNetRatio = 1.5
+        self.uNetBlocks = 3
+        
+        raise ValueError("WUNETCGAN.loadConstants must be overriten") 
     
-    # Calculate the signs of y_true and y_pred
-    y_true_sign = tf.sign(y_true)
-    y_pred_sign = tf.sign(y_pred)
+    def genUpscale(self, model):
+        model = self.TransposedBlock(model, 2, 32)
+        model = self.TransposedBlock(model, 2, 32)
+        model = self.TransposedBlock(model, 2, 6)
+        raise ValueError("WUNETCGAN.genUpscale must be overriten") 
+        return model
     
-    # Calculate the element-wise equality of signs
-    sign_equal = tf.equal(y_true_sign, y_pred_sign)
-    
-    # Calculate the percentage of time with the same sign
-    return tf.reduce_mean(tf.cast(sign_equal, tf.float32)) * 100.0
-
-def shuffle_no_repeat(imgs, lbls):
-    n = len(imgs)
-    shuffledIndices = np.random.permutation(n)
-    shuffledImgs = imgs[shuffledIndices]
-    shuffledLbls = lbls[shuffledIndices]
-    return shuffledImgs, shuffledLbls
-
-def shuffle_same_class(imgs, lbls, classes):
-    indices = np.argsort(lbls)
-
-    sortedImgs = imgs[indices]
-    sortedLbls = lbls[indices]
-
-    lstLbl = sortedLbls[0]
-    lstLblId = 0
-    classLocations = [0]*classes
-    classLocations[sortedLbls[0]] = 0
-
-    for i in range(sortedLbls.shape[0]):
-        if(sortedLbls[i] != lstLbl):
-            classLocations[sortedLbls[i]] = i
-            lstLbl = sortedLbls[i]
-            sortedImgs[lstLblId:i-1], sortedLbls[lstLblId:i-1] = shuffle_no_repeat(sortedImgs[lstLblId:i-1], sortedLbls[lstLblId:i-1])
-            lstLblId = i
-    sortedImgs[lstLblId:], sortedLbls[lstLblId:] = shuffle_no_repeat(sortedImgs[lstLblId:], sortedLbls[lstLblId:])
-
-    classCount = [0]*classes
-    imgOutput = np.ndarray(imgs.shape, imgs.dtype)
-
-    for i in range(lbls.shape[0]):
-        currClass = lbls[i]
-        imgOutput[i] = sortedImgs[classLocations[currClass] + classCount[currClass]]
-        classCount[currClass] += 1
-    return imgOutput
-
-def shuffle_different_class(imgs, lbls, classes):
-    n = lbls.shape[0]
-    indices = np.argsort(lbls)
-
-    sortedImgs = imgs[indices]
-    sortedLbls = lbls[indices]
-
-    lstLbl = sortedLbls[0]
-    lstLblId = 0
-    classLocations = [0]*classes
-    nClass = [0]*classes
-    classLocations[sortedLbls[0]] = 0
-
-    for i in range(n):
-        nClass[sortedLbls[i]] += 1
-        if(sortedLbls[i] != lstLbl):
-            classLocations[sortedLbls[i]] = i
-            lstLbl = sortedLbls[i]
-            sortedImgs[lstLblId:i-1], sortedLbls[lstLblId:i-1] = shuffle_no_repeat(sortedImgs[lstLblId:i-1], sortedLbls[lstLblId:i-1])
-            lstLblId = i
-    sortedImgs[lstLblId:], sortedLbls[lstLblId:] = shuffle_no_repeat(sortedImgs[lstLblId:], sortedLbls[lstLblId:])
-
-    imgOutput = np.ndarray(imgs.shape, imgs.dtype)
-    lblOutput = np.ndarray(lbls.shape, lbls.dtype)
-
-    for i in range(n):
-        currClass = lbls[i]
-        indexPick = (np.random.randint(n-nClass[currClass]) + nClass[currClass] + classLocations[currClass])%n
-        imgOutput[i] = sortedImgs[indexPick]
-        lblOutput[i] = sortedLbls[indexPick]
-    return imgOutput, lblOutput
-
-class WUNETCGAN_CIFAR_10(Augmentator):
-    #Constantes:
-    genWidth = 4
-    genHeight = 4
-
-    approximateNoiseDim = 100
-    noiseDepth = int(np.ceil(approximateNoiseDim/(genWidth*genHeight)))
-    noiseDim = genWidth*genHeight*noiseDepth
-
-    initLr = 2e-5
-    leakyReluAlpha = 0.2
-    dropoutParam = 0.02
-    batchNormMomentum = 0.8
-    batchNormEpsilon = 2e-4
-
-    clipValue = 0.01
-
-    ganEpochs = 100
-    batchSize = 64
-    extraDiscEpochs = 2
-    generator = None
-    discriminator = None
-    gan = None
+    def discDownscale(self, model):
+        model = self.InceptionBlock(model, 2, 32, stride=2)
+        model = self.InceptionBlock(model, 2, 32, stride=2)
+        model = self.InceptionBlock(model, 2, 32, stride=2)
+        raise ValueError("WUNETCGAN.discDownscale must be overriten") 
+        return model
 
     def __init__(self, params: Params, extraParams = None, nameComplement = ""):
         self.name = self.__class__.__name__ + "_" +  nameComplement
@@ -133,74 +63,9 @@ class WUNETCGAN_CIFAR_10(Augmentator):
         self.imgHeight = params.imgHeight
 
         self.params = params
-    
-    def ResidualBlock(self, model, nLayers:int, outDepth:int, kernelSize:int = 3, stride:int = 1):
-        identity = model
-        if(stride != 1):
-            identity = layers.MaxPooling2D(stride)(identity)
-        identity = Conv2D(filters=outDepth, kernel_size=1, padding='same', kernel_initializer='glorot_uniform')(identity)
 
-        for i in range(nLayers):
-            model = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides = (stride if i == 0 else 1))(model)
-            model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
-            if(i != nLayers - 1):
-                model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
+        self.loadConstants()
         
-        #model = layers.Dropout(self.dropoutParam)(model)
-        model = layers.add([model, identity])
-        model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-        return model
-    
-    def InceptionBlock(self, model, nLayers:int, outDepth:int, stride:int = 1):
-        for i in range(nLayers):
-            identity = model
-            if(stride != 1 and i == 0):
-                identity = layers.MaxPooling2D(stride)(identity)
-            identity = Conv2D(filters=outDepth, kernel_size=1, padding='same', kernel_initializer='glorot_uniform')(identity)
-            paths = [identity]
-
-            for kernelSize in [3, 5, 7]: 
-                path = model
-                path = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides = (stride if i == 0 else 1))(path)
-                path = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(path)
-                path = layers.Dropout(self.dropoutParam)(path)
-                paths.append(path)
-
-            model = layers.add(paths)
-            model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-        return model
-    
-    def TransposedBlock(self, model, nLayers: int, channels: int, kernelSize:int=3):
-        model = Conv2DTranspose(filters=channels, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides=2)(model)
-        model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
-        model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-        #model = layers.Dropout(self.dropoutParam)(model)
-        for i in range(nLayers):
-            model = Conv2D(filters=channels, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform')(model)
-            model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
-            model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-        return model
-    
-    def UNet(self, model, channels, channelRatio=2, nBlocks = 1):
-        shape = tf.shape(model)._inferred_value
-        spatialResolution = shape[-2]
-        ksize = 3 if spatialResolution > 3 else spatialResolution
-        downChannels = int(channels*channelRatio)
-
-        model = self.ResidualBlock(model, nBlocks, channels, kernelSize=ksize)
-
-        if(spatialResolution%2==0 and spatialResolution>=self.genWidth):
-            down = layers.MaxPooling2D(2)(model)
-
-            ret = self.UNet(down, downChannels, channelRatio)
-            
-            up = self.TransposedBlock(ret, 0, channels, ksize)
-
-            model = layers.concatenate([model, up])
-
-        model = self.ResidualBlock(model, nBlocks, channels, kernelSize=ksize)
-        return model
-    
     #Cria model geradora com keras functional API
     def createGenModel(self):
         noise = keras.Input(shape=(self.noiseDim,), name = 'gen_input_gaussian_distribution')
@@ -212,15 +77,13 @@ class WUNETCGAN_CIFAR_10(Augmentator):
         reshapedLabels = layers.Reshape((self.genWidth, self.genHeight, 1))(embeddedLabels)
         X = layers.concatenate([X, reshapedLabels])
 
-        X = self.TransposedBlock(X, 2, 32)
-        X = self.TransposedBlock(X, 2, 32)
-        X = self.TransposedBlock(X, 2, 6)
+        X = self.genUpscale(X)
 
         imageInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'gen_input_img')
 
         X = layers.concatenate([X, imageInput])
 
-        X = self.UNet(X, 32, 1.5, 3)
+        X = self.UNet(X, self.uNetChannels, self.uNetRatio, self.uNetBlocks)
 
         output = Conv2D(filters=self.imgChannels, kernel_size=1, padding='same', activation='tanh',  name = 'gen_output', kernel_initializer='glorot_uniform')(X)
         
@@ -229,7 +92,7 @@ class WUNETCGAN_CIFAR_10(Augmentator):
         keras.utils.plot_model(
             self.generator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/generator.png')
         )
-
+    
     #Cria model discriminadora com functional API
     def createDiscModel(self):
         img1 = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'disc_input_img_1')
@@ -245,11 +108,9 @@ class WUNETCGAN_CIFAR_10(Augmentator):
 
         X = layers.concatenate([img1, img2, reshapedLabel1, reshapedLabel2])
 
-        X = self.InceptionBlock(X, 2, 32, stride=2)
-        X = self.InceptionBlock(X, 2, 32, stride=2)
-        X = self.InceptionBlock(X, 2, 32, stride=2)
+        X = self.discDownscale(X)
 
-        X = Conv2D(1, 4, kernel_initializer='glorot_uniform', activation='linear')(X) ##quando utilizar a saída multiclasse, testar usar softmax
+        X = Conv2D(1, self.genWidth, kernel_initializer='glorot_uniform', activation='linear')(X) ##quando utilizar a saída multiclasse, testar usar softmax
         discOutput = Flatten(name = 'discoutput_realvsfake')(X)
 
         self.discriminator = keras.Model(inputs = [img1, img2, label1, label2], outputs = discOutput, name = 'discriminator')
@@ -257,18 +118,6 @@ class WUNETCGAN_CIFAR_10(Augmentator):
         keras.utils.plot_model(
             self.discriminator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/discriminator.png')
         )
-
-    def saveModel(self, epoch = 0, genLossHist = [], discLossHist = []):
-        saveParam(self.name + '_current_epoch', epoch)
-        saveParam(self.name + '_gen_loss_hist', genLossHist)
-        saveParam(self.name + '_disc_loss_hist', discLossHist)
-        epochPath = self.basePath + '/modelSaves/fold_' + str(self.currentFold) + '/epoch_' + str(epoch)
-
-        self.discriminator.save_weights(verifiedFolder(epochPath + '/disc_weights'))
-        self.generator.save_weights(verifiedFolder(epochPath + '/gen_weights'))
-
-        saveParam(self.name + '_disc_opt_lr', np.float64(self.optDiscr._decayed_lr('float32').numpy()))
-        saveParam(self.name + '_gan_opt_lr', np.float64(self.optcGan._decayed_lr('float32').numpy()))
 
     #compilando discriminador e gan
     def compile(self):
@@ -281,10 +130,10 @@ class WUNETCGAN_CIFAR_10(Augmentator):
             self.discriminator.load_weights(verifiedFolder(epochPath + '/disc_weights'))
             self.generator.load_weights(verifiedFolder(epochPath + '/gen_weights'))
             self.optDiscr = Adam(learning_rate=loadParam(self.name + '_disc_opt_lr'), beta_1 = 0.5, beta_2=0.9)#Adam(learning_rate = self.initLr, beta_1 = 0.5, beta_2=0.9)
-            self.optcGan = Adam(learning_rate=loadParam(self.name + '_gan_opt_lr'), beta_1 = 0.5, beta_2=0.9)#Adam(learning_rate = self.initLr*10, beta_1=0.5, beta_2=0.9)
+            self.optGan = Adam(learning_rate=loadParam(self.name + '_gan_opt_lr'), beta_1 = 0.5, beta_2=0.9)#Adam(learning_rate = self.initLr*10, beta_1=0.5, beta_2=0.9)
         else:
             self.optDiscr = Adam(learning_rate=self.initLr, beta_1 = 0.5, beta_2=0.9)#Adam(learning_rate = self.initLr, beta_1 = 0.5, beta_2=0.9)
-            self.optcGan = Adam(learning_rate=self.initLr, beta_1 = 0.5, beta_2=0.9)#Adam(learning_rate = self.initLr*10, beta_1=0.5, beta_2=0.9)
+            self.optGan = Adam(learning_rate=self.initLr, beta_1 = 0.5, beta_2=0.9)#Adam(learning_rate = self.initLr*10, beta_1=0.5, beta_2=0.9)
 
         self.discriminator.compile(loss=wasserstein_loss, optimizer=self.optDiscr, metrics=[my_distance, my_accuracy])
 
@@ -295,7 +144,7 @@ class WUNETCGAN_CIFAR_10(Augmentator):
         cganOutput =  self.discriminator([self.generator([cganNoiseInput, cganLabelInput, cganImgInput]), cganImgInput, cganLabelInput, cganLabelInput])
         self.gan = Model((cganNoiseInput, cganLabelInput, cganImgInput), cganOutput)
 
-        self.gan.compile(loss=wasserstein_loss, optimizer=self.optcGan)
+        self.gan.compile(loss=wasserstein_loss, optimizer=self.optGan)
         
         self.discriminator.trainable = True
         self.gan.summary()
@@ -308,6 +157,9 @@ class WUNETCGAN_CIFAR_10(Augmentator):
 
     #treinamento GAN
     def train(self, dataset: Dataset):
+        print('started ' + self.name + ' training')
+        self.testImgs, self.testLbls = dataset.getTestData(0, 20)
+
         discLossHist = []
         genLossHist = []
         benchNoise = None
@@ -337,7 +189,6 @@ class WUNETCGAN_CIFAR_10(Augmentator):
         nBatches = int(dataset.trainInstances/self.batchSize) - self.extraDiscEpochs
 
         for epoch in range(startEpoch+1, self.ganEpochs):
-            print("starting epoch" + str(epoch))
             if(loadParam('close') == True):
                 saveParam('close', False)
                 self.saveModel(epoch-1, genLossHist, discLossHist)
@@ -390,7 +241,7 @@ class WUNETCGAN_CIFAR_10(Augmentator):
                     for outId in range(10):
                         newOut[outId*2] = imagesDs[outId]
                         newOut[outId*2+1] = out[outId]
-                    showOutputAsImg(newOut, self.basePath + '/output_f' + str(self.currentFold) + '_e' + str(epoch) + '_' + '_'.join([str(a) for a in labelBatch[:10]]) + '.png', colored=True)
+                    showOutputAsImg(newOut, self.basePath + '/output_f' + str(self.currentFold) + '_e' + str(epoch) + '_' + '_'.join([str(a) for a in labelBatch[:10]]) + '.png', colored=(self.imgChannels>1))
                     plotLoss([[genLossHist, 'generator loss'],[discLossHist, 'discriminator loss']], self.basePath + '/trainPlot.png')
 
             if(self.params.saveModels):
@@ -398,19 +249,23 @@ class WUNETCGAN_CIFAR_10(Augmentator):
                 
     #Gera e salva imagens
     def saveGenerationExample(self, nEntries = 20):
-        noise = np.random.uniform(-1,1, size=(5*self.nClasses,self.noiseDim))
-        labels = np.floor(np.array(range(5*self.nClasses))/5)
-        images = self.generator.predict([noise, labels])
+        benchNoise = np.random.uniform(-1,1, size=(20,self.noiseDim))
+        images = self.generator.predict([benchNoise, self.testLbls, self.testImgs])
         out = ((images * 127.5) + 127.5).astype('uint8')
-        showOutputAsImg(out, self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a) for a in labels]) + '.png',self.nClasses*5, colored=True)
+        imagesDs = ((self.testImgs * 127.5) + 127.5).astype('uint8')
+        newOut = np.ndarray(out.shape, out.dtype)
+        for outId in range(10):
+            newOut[outId*2] = imagesDs[outId]
+            newOut[outId*2+1] = out[outId]
 
-    def generate(self, nEntries):
+        showOutputAsImg(newOut, self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a) for a in self.testLbls]) + '.png', colored=(self.imgChannels>1))
+
+    def generate(self, srcImgs, srcLbls):
+        nEntries = srcLbls.shape[0]
         print(self.name + ": started data generation")
-        genInput = np.random.uniform(-1,1,size=(nEntries,self.noiseDim))
-        genLabelInput = np.random.randint(0,self.nClasses, size = (nEntries))
-
+        noise = np.random.uniform(-1,1,size=(nEntries,self.noiseDim))
         if(self.generator is None):
             self.compile()
-        genImages = self.generator.predict([genInput, genLabelInput])
+        genImages = self.generator.predict([noise, srcLbls, srcImgs])
         print(self.name + ": finished data generation")
-        return genImages, genLabelInput
+        return genImages, srcLbls

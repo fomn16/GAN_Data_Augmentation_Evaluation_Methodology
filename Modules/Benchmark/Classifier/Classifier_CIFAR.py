@@ -66,7 +66,7 @@ class Classifier_CIFAR(Benchmark):
 
         nBatches = int(dataset.trainInstances/self.batchSize)
         for epoch in range(round(self.nEpochs)):
-            imgs,lbls = augmentator.generate(dataset.trainInstances)
+            imgs,lbls = augmentator.generate(dataset.trainImgs, dataset.trainLbls)
             lbls = np.array([[1 if i == lbl else 0 for i in range(self.nClasses)] for lbl in lbls], dtype='float32')
             for i in range(nBatches):
                 imgBatch = imgs[i*self.batchSize:(i+1)*self.batchSize]

@@ -67,7 +67,7 @@ class TSNE_INCEPTION(Benchmark):
                 p[0] = np.concatenate((p[0], out))
                 l[0] =  np.concatenate((l[0], testLbls))
 
-            genImgs, genLbls = augmentator.generate(self.inceptionBatchSize)
+            genImgs, genLbls = augmentator.generate(testImgs, testLbls)
             genLbls += self.nClasses
             out = self.generateDescriptors(genImgs)
             if(i == 0):

@@ -17,12 +17,12 @@ class MIXED(Augmentator):
         self.arr = arr
         self.ids = ids
 
-    def generate(self, nEntries):
+    def generate(self, srcImgs, srcLbls):
         imgs = []
         lbls = []
         
         for id in self.ids:
-            _imgs, _lbls = self.arr[id].generate(nEntries)
+            _imgs, _lbls = self.arr[id].generate(srcImgs, srcLbls)
             if(len(imgs) == 0):
                 imgs = _imgs
                 lbls = _lbls

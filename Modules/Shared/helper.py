@@ -159,7 +159,11 @@ def load_pickle(file_path):
 def LoadDataset(name, with_info,as_supervised,data_dir,nameComplement,sliceNames, transformationFunction = None, filterFunction = None):
     outputDir = f'{data_dir}/{name}_{nameComplement}_tfrecords'
     
-    dataset, _ = tfds.load(name=name, with_info=with_info, as_supervised=as_supervised, data_dir=data_dir)
+    dataset, _ = tfds.load(
+        name=name, 
+        with_info=with_info, 
+        as_supervised=as_supervised, 
+        data_dir=data_dir)
     train = dataset[sliceNames[0]]
     test = dataset[sliceNames[1]]
 

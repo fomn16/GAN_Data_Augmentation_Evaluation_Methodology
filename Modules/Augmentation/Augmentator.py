@@ -20,5 +20,5 @@ class Augmentator:
     def saveGenerationExample(self, nEntries = 20):
         pass
 
-    def generate(self, nEntries):
+    def generate(self, srcImgs, srcLbls):
         pass

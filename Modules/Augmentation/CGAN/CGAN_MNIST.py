@@ -6,7 +6,8 @@ from Modules.Augmentation.CGAN.CGAN import CGAN
 
 class CGAN_MNIST(CGAN):
     def __init__(self, params: Params, extraParams=None, nameComplement=""):
-        super().__init__(params, extraParams, 'MNIST_' + nameComplement)
+        super().__init__(params, extraParams)
+        self.name = self.__class__.__name__+'_'+params.datasetName+'_'+params.datasetNameComplement+'_'+nameComplement
 
     def loadConstants(self):
         self.genWidth = 7
@@ -22,7 +23,7 @@ class CGAN_MNIST(CGAN):
         self.batchNormMomentum = 0.8
         self.batchNormEpsilon = 2e-4
 
-        self.ganEpochs = 25
+        self.ganEpochs = 50
         self.batchSize = 128
         self.extraDiscEpochs = 1
         
@@ -31,11 +32,11 @@ class CGAN_MNIST(CGAN):
         self.gan = None
 
     def genUpscale(self, model):
-        model = self.TransposedBlock(model, 2, 64)
-        model = self.TransposedBlock(model, 2, 64)
+        model = self.TransposedBlock(model, 2, 64, kernelSize=4, dropout=False)
+        model = self.TransposedBlock(model, 2, 64, dropout=False)
         return model
     
     def discDownscale(self, model):
-        model = self.Block(model, 1, 64)
-        model = self.Block(model, 1, 64)
+        model = self.Block(model, 2, 64)
+        model = self.Block(model, 2, 32)
         return model

@@ -1,13 +1,12 @@
 from Modules.Datasets.Dataset import Dataset
-
 from Modules.Shared.config import *
 
-class CIFAR_10(Dataset):
+class IMAGENET(Dataset):
     def loadParams(self):
-        self.params.datasetName = Datasets.CIFAR_10
+        self.params.datasetName = Datasets.IMAGENET
         self.params.datasetNameComplement = 'default'
         
-        self.params.nClasses = 10
+        self.params.nClasses = 1000
         self.params.imgChannels = 3
         self.params.imgWidth = 32
         self.params.imgHeight = 32
@@ -15,4 +14,4 @@ class CIFAR_10(Dataset):
         self.transformFunction = None
         self.filterFunction = None
 
-        self.slices = ['train', 'test']
+        self.slices = ['train', 'validation']

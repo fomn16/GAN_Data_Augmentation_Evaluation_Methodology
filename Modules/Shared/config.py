@@ -26,7 +26,9 @@ from Modules.Benchmark.Benchmark import Benchmark
 class Datasets:
     MNIST = "mnist"
     CIFAR_10 = "cifar10"
-    GTSRB = "visual_domain_decathlon/vgg-flowers"
+    IMAGENET = "imagenet_resized/32x32"
+    FLOWERS = "tf_flowers"
+    TEST = "tf_flowers"
 
 class Augmentators:
     GAN = "gan"
@@ -62,7 +64,7 @@ def getAugmentators(augmentator, params:Params, extraParams = None, nameCompleme
             return [WUNETCGAN_MNIST(params, extraParams, name)]
         if(params.datasetName == Datasets.CIFAR_10):
             return [WUNETCGAN_CIFAR_10(params, extraParams, name)]
-        if(params.datasetName == Datasets.GTSRB):
+        if(params.datasetName == Datasets.FLOWERS):
             return [WUNETCGAN_CIFAR_10(params, extraParams, name)]
     if(augmentator == Augmentators.DIRECT):
         return [DATASET_DIRECTLY(params, extraParams, name)]

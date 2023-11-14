@@ -6,7 +6,8 @@ from Modules.Augmentation.WCGAN.WCGAN import WCGAN
 
 class WCGAN_MNIST(WCGAN):
     def __init__(self, params: Params, extraParams=None, nameComplement=""):
-        super().__init__(params, extraParams, 'MNIST_' + nameComplement)
+        super().__init__(params, extraParams)
+        self.name = self.__class__.__name__+'_'+params.datasetName+'_'+params.datasetNameComplement+'_'+nameComplement
 
     def loadConstants(self):
         self.genWidth = 7
@@ -24,19 +25,19 @@ class WCGAN_MNIST(WCGAN):
 
         self.clipValue = 0.01
 
-        self.ganEpochs = 25
+        self.ganEpochs = 50
         self.batchSize = 128
-        self.extraDiscEpochs = 2
+        self.extraDiscEpochs = 3
         self.generator = None
         self.discriminator = None
         self.gan = None
 
     def genUpscale(self, model):
-        model = self.TransposedBlock(model, 1, 64)
-        model = self.TransposedBlock(model, 1, 64)
+        model = self.TransposedBlock(model, 2, 64, dropout=False)
+        model = self.TransposedBlock(model, 2, 64, dropout=False)
         return model
     
     def discDownscale(self, model):
         model = self.Block(model, 2, 64)
-        model = self.Block(model, 1, 64)
+        model = self.Block(model, 2, 64)
         return model

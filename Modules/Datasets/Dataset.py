@@ -2,6 +2,7 @@ import sys
 sys.path.insert(1, '../..')
 from Modules.Shared.helper import *
 from Modules.Shared.Params import Params
+from Modules.Shared.config import *
 
 #imgs => [w][h][-1,1], lbls => [0,1]
 class Dataset:
@@ -11,7 +12,7 @@ class Dataset:
         self.name = params.datasetName + "_" + self.params.datasetNameComplement
     
     def loadParams(self):
-        self.params.datasetName = 'mnist'
+        self.params.datasetName = Datasets.MNIST
         self.params.datasetNameComplement = 'default'
 
         self.params.nClasses = 10

@@ -1,9 +1,10 @@
 from Modules.Datasets.Dataset import Dataset
+from Modules.Shared.config import *
 
 
 class MNIST(Dataset):
     def loadParams(self):
-        self.params.datasetName = 'mnist'
+        self.params.datasetName = Datasets.MNIST
         self.params.datasetNameComplement = 'default'
 
         self.params.nClasses = 10

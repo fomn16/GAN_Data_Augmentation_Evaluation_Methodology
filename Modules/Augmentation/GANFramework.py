@@ -100,29 +100,35 @@ def shuffle_different_class(imgs, lbls, classes):
     return imgOutput, lblOutput
 
 class GANFramework(Augmentator):    
-    def Block(self, model, nLayers: int, channels: int, kernelSize:int=3, kernelRegularizer=None):
+    def Block(self, model, nLayers: int, channels: int, kernelSize:int=3, kernelRegularizer=None, batchNorm=True, dropout=True):
         model = Conv2D(filters=channels, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides=2, kernel_regularizer=kernelRegularizer)(model)
-        model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
+        if batchNorm:
+            model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
         model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-        model = layers.Dropout(self.dropoutParam)(model)
+        if dropout:
+            model = layers.Dropout(self.dropoutParam)(model)
         for i in range(nLayers):
             model = Conv2D(filters=channels, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', kernel_regularizer=kernelRegularizer)(model)
-            model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
+            if(batchNorm):
+                model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
             model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         return model
     
-    def TransposedBlock(self, model, nLayers: int, channels: int, kernelSize:int=3, kernelRegularizer=None):
+    def TransposedBlock(self, model, nLayers: int, channels: int, kernelSize:int=3, kernelRegularizer=None, batchNorm=True, dropout=True):
         model = Conv2DTranspose(filters=channels, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides=2, kernel_regularizer=kernelRegularizer)(model)
-        model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
+        if batchNorm:
+            model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
         model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
-        model = layers.Dropout(self.dropoutParam)(model)
+        if dropout:
+            model = layers.Dropout(self.dropoutParam)(model)
         for i in range(nLayers):
             model = Conv2D(filters=channels, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', kernel_regularizer=kernelRegularizer)(model)
-            model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
+            if batchNorm:
+                model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
             model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         return model
     
-    def ResidualBlock(self, model, nLayers:int, outDepth:int, kernelSize:int = 3, stride:int = 1):
+    def ResidualBlock(self, model, nLayers:int, outDepth:int, kernelSize:int = 3, stride:int = 1, batchNorm=True, dropout=True):
         identity = model
         if(stride != 1):
             identity = layers.MaxPooling2D(stride)(identity)
@@ -130,16 +136,18 @@ class GANFramework(Augmentator):
 
         for i in range(nLayers):
             model = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides = (stride if i == 0 else 1))(model)
-            model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
+            if batchNorm:
+                model = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(model)
             if(i != nLayers - 1):
                 model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         
-        model = layers.Dropout(self.dropoutParam)(model)
+        if dropout:
+            model = layers.Dropout(self.dropoutParam)(model)
         model = layers.add([model, identity])
         model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         return model
     
-    def InceptionBlock(self, model, nLayers:int, outDepth:int, stride:int = 1):
+    def InceptionBlock(self, model, nLayers:int, outDepth:int, stride:int = 1, batchNorm=True, dropout=True):
         for i in range(nLayers):
             identity = model
             if(stride != 1 and i == 0):
@@ -150,32 +158,34 @@ class GANFramework(Augmentator):
             for kernelSize in [3, 5, 7]: 
                 path = model
                 path = Conv2D(filters=outDepth, kernel_size=kernelSize, padding='same', kernel_initializer='glorot_uniform', strides = (stride if i == 0 else 1))(path)
-                path = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(path)
-                path = layers.Dropout(self.dropoutParam)(path)
+                if batchNorm:
+                    path = layers.BatchNormalization(axis=-1, epsilon=self.batchNormEpsilon, momentum=self.batchNormMomentum)(path)
+                if dropout:
+                    path = layers.Dropout(self.dropoutParam)(path)
                 paths.append(path)
 
             model = layers.add(paths)
             model = layers.LeakyReLU(alpha=self.leakyReluAlpha)(model)
         return model
     
-    def UNet(self, model, channels, channelRatio=2, nBlocks = 1):
+    def UNet(self, model, channels, channelRatio=2, nBlocks = 1, batchNorm=True, dropout=True):
         shape = tf.shape(model)._inferred_value
         spatialResolution = shape[-2]
         ksize = 3 if spatialResolution > 3 else spatialResolution
         downChannels = int(channels*channelRatio)
 
-        model = self.ResidualBlock(model, nBlocks, channels, kernelSize=ksize)
+        model = self.ResidualBlock(model, nBlocks, channels, kernelSize=ksize, batchNorm=batchNorm, dropout=dropout)
 
         if(spatialResolution%2==0 and spatialResolution>=self.genWidth):
             down = layers.MaxPooling2D(2)(model)
 
-            ret = self.UNet(down, downChannels, channelRatio)
+            ret = self.UNet(down, downChannels, channelRatio, batchNorm=batchNorm, dropout=dropout)
             
-            up = self.TransposedBlock(ret, 0, channels, ksize)
+            up = self.TransposedBlock(ret, 0, channels, ksize, batchNorm=batchNorm, dropout=dropout)
 
             model = layers.concatenate([model, up])
 
-        model = self.ResidualBlock(model, nBlocks, channels, kernelSize=ksize)
+        model = self.ResidualBlock(model, nBlocks, channels, kernelSize=ksize, batchNorm=batchNorm, dropout=dropout)
         return model
     
     def saveModel(self, epoch = 0, genLossHist = [], discLossHist = []):

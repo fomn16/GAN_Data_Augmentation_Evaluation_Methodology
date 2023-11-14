@@ -25,7 +25,7 @@ class CGAN(GANFramework):
         self.batchNormEpsilon = 2e-4
 
         self.ganEpochs = 100
-        self.batchSize = 64
+        self.batchSize = 128
         self.extraDiscEpochs = 5
         self.generator = None
         self.discriminator = None
@@ -69,8 +69,8 @@ class CGAN(GANFramework):
         cgenX = layers.Reshape((self.genWidth, self.genHeight, self.noiseDepth))(cgenNoiseInput)
     
         labelInput = keras.Input(shape=(1,), name = 'genInput_label')
-        embeddedLabels= layers.Embedding(self.nClasses, self.genWidth*self.genHeight*2)(labelInput)
-        reshapedLabels = layers.Reshape((self.genWidth, self.genHeight, 2))(embeddedLabels)
+        embeddedLabels= layers.Embedding(self.nClasses, self.genWidth*self.genHeight)(labelInput)
+        reshapedLabels = layers.Reshape((self.genWidth, self.genHeight, 1))(embeddedLabels)
         cgenX = layers.concatenate([cgenX, reshapedLabels])
 
         model = self.genUpscale(cgenX)

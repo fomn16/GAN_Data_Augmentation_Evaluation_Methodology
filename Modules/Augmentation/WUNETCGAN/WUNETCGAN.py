@@ -98,22 +98,14 @@ class WUNETCGAN(GANFramework):
         img1 = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'disc_input_img_1')
         img2 = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'disc_input_img_2')
 
-        label1 = keras.Input(shape=(1,), name = 'disc_input_label_1')
-        embeddedLabel1 = layers.Embedding(self.nClasses, self.imgWidth*self.imgHeight)(label1)
-        reshapedLabel1 = layers.Reshape((self.imgWidth, self.imgHeight, 1))(embeddedLabel1)
-
-        label2 = keras.Input(shape=(1,), name = 'disc_input_label_2')
-        embeddedLabel2 = layers.Embedding(self.nClasses, self.imgWidth*self.imgHeight)(label2)
-        reshapedLabel2 = layers.Reshape((self.imgWidth, self.imgHeight, 1))(embeddedLabel2)
-
-        X = layers.concatenate([img1, img2, reshapedLabel1, reshapedLabel2])
+        X = layers.concatenate([img1, img2])
 
         X = self.discDownscale(X)
 
-        X = Conv2D(1, self.genWidth, kernel_initializer='glorot_uniform', activation='linear')(X) ##quando utilizar a saída multiclasse, testar usar softmax
+        X = Conv2D(1 + self.nClasses, self.genWidth, kernel_initializer='glorot_uniform', activation='softmax')(X)
         discOutput = Flatten(name = 'discoutput_realvsfake')(X)
 
-        self.discriminator = keras.Model(inputs = [img1, img2, label1, label2], outputs = discOutput, name = 'discriminator')
+        self.discriminator = keras.Model(inputs = [img1, img2], outputs = discOutput, name = 'discriminator')
         self.discriminator.summary()
         keras.utils.plot_model(
             self.discriminator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/discriminator.png')
@@ -135,13 +127,13 @@ class WUNETCGAN(GANFramework):
             self.optDiscr = Adam(learning_rate=self.initLr, beta_1 = 0.5, beta_2=0.9)#Adam(learning_rate = self.initLr, beta_1 = 0.5, beta_2=0.9)
             self.optGan = Adam(learning_rate=self.initLr, beta_1 = 0.5, beta_2=0.9)#Adam(learning_rate = self.initLr*10, beta_1=0.5, beta_2=0.9)
 
-        self.discriminator.compile(loss=wasserstein_loss, optimizer=self.optDiscr, metrics=[my_distance, my_accuracy])
+        self.discriminator.compile(loss=wasserstein_loss, optimizer=self.optDiscr, metrics=[my_distance, 'accuracy'])
 
         self.discriminator.trainable = False
         cganNoiseInput = Input(shape=(self.noiseDim,))
         cganLabelInput = Input(shape=(1,))
         cganImgInput = Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels))
-        cganOutput =  self.discriminator([self.generator([cganNoiseInput, cganLabelInput, cganImgInput]), cganImgInput, cganLabelInput, cganLabelInput])
+        cganOutput =  self.discriminator([self.generator([cganNoiseInput, cganLabelInput, cganImgInput]), cganImgInput])
         self.gan = Model((cganNoiseInput, cganLabelInput, cganImgInput), cganOutput)
 
         self.gan.compile(loss=wasserstein_loss, optimizer=self.optGan)
@@ -205,14 +197,17 @@ class WUNETCGAN(GANFramework):
                     
                     XImg    = np.concatenate((imgsShuffled, imgsFake, imgsWrongClass))
                     XImg2   = np.concatenate((imgBatch, imgBatch, imgBatch))
-                    XLabel  = np.concatenate((labelBatch, labelBatch, lblsWrongClass))
-                    XLabel2 = np.concatenate((labelBatch, labelBatch, labelBatch))
 
-                    y = ([-1] * self.batchSize) + ([1] * self.batchSize) + ([1] * self.batchSize)
-                    y = np.reshape(y, (-1,))
 
-                    (XImg, XImg2, XLabel, XLabel2, y) = shuffle(XImg, XImg2, XLabel, XLabel2, y)
-                    discLoss = self.discriminator.train_on_batch([XImg, XImg2, XLabel, XLabel2], y)
+                    fake = [0] * self.nClasses + [1]
+                    fake = [fake for _ in range(self.batchSize)]
+
+                    real = [[1 if i == c else 0 for c in range(self.nClasses + 1)] for i in labelBatch]
+                
+                    y = np.array((real) + (fake) + (fake))
+
+                    (XImg, XImg2, y) = shuffle(XImg, XImg2, y)
+                    discLoss = self.discriminator.train_on_batch([XImg, XImg2], y)
 
                     for l in self.discriminator.layers:
                         weights = l.get_weights()
@@ -221,8 +216,8 @@ class WUNETCGAN(GANFramework):
                 
                 imgBatch, labelBatch = dataset.getTrainData((i)*self.batchSize, (i+1)*self.batchSize)
                 genTrainNoise = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
-                y = [-1]*(self.batchSize)
-                y = np.reshape(y, (-1,))
+                y = np.array([[1 if i == c else 0 for c in range(self.nClasses + 1)] for i in labelBatch])
+
                 ganLoss = self.gan.train_on_batch([genTrainNoise, labelBatch, imgBatch],y)
 
                 if i == nBatches-1:

@@ -6,7 +6,8 @@ from Modules.Augmentation.CGAN.CGAN import CGAN
 
 class CGAN_CIFAR_10(CGAN):
     def __init__(self, params: Params, extraParams=None, nameComplement=""):
-        super().__init__(params, extraParams, 'CIFAR_10_' + nameComplement)
+        super().__init__(params, extraParams)
+        self.name = self.__class__.__name__+'_'+params.datasetName+'_'+params.datasetNameComplement+'_'+nameComplement
 
     def loadConstants(self):
         self.genWidth = 4
@@ -23,7 +24,7 @@ class CGAN_CIFAR_10(CGAN):
         self.batchNormEpsilon = 2e-4
         self.l2RegParam = 0.01
 
-        self.ganEpochs = 100
+        self.ganEpochs = 25
         self.batchSize = 32
         self.extraDiscEpochs = 1
         self.generator = None

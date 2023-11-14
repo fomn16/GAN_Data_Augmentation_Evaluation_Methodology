@@ -6,7 +6,8 @@ from Modules.Augmentation.GAN.GAN import GAN
 
 class GAN_CIFAR_10(GAN):
     def __init__(self, params: Params, extraParams=None, nameComplement=""):
-        super().__init__(params, extraParams, 'CIFAR_10_' + nameComplement)
+        super().__init__(params, extraParams)
+        self.name = self.__class__.__name__+'_'+params.datasetName+'_'+params.datasetNameComplement+'_'+nameComplement
         
     def loadConstants(self):
         self.genWidth = 4
@@ -24,7 +25,7 @@ class GAN_CIFAR_10(GAN):
         self.batchNormMomentum = 0.8
         self.batchNormEpsilon = 2e-4
 
-        self.ganEpochs = 100
+        self.ganEpochs = 25
         self.batchSize = 64
 
         self.generator = None

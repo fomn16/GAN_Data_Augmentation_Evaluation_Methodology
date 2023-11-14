@@ -1,9 +1,10 @@
 from Modules.Datasets.Dataset import Dataset
 from Modules.Shared.helper import *
+from Modules.Shared.config import *
 
 class CIFAR_10_UNBALANCED(Dataset):
     def loadParams(self):
-        self.params.datasetName = 'cifar10'
+        self.params.datasetName = Datasets.CIFAR_10
         self.params.datasetNameComplement = 'unbalanced'
         
         self.params.nClasses = 10
@@ -12,6 +13,6 @@ class CIFAR_10_UNBALANCED(Dataset):
         self.params.imgHeight = 32
 
         self.transformFunction = None
-        self.filterFunction = lambda img, data: unbalance(img, data, 250, self.params.nClasses)
+        self.filterFunction = lambda img, data: unbalance(img, data, 600, self.params.nClasses)
 
         self.slices = ['train', 'test']

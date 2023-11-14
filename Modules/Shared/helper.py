@@ -159,30 +159,60 @@ def load_pickle(file_path):
 def LoadDataset(name, with_info,as_supervised,data_dir,nameComplement,sliceNames, transformationFunction = None, filterFunction = None):
     outputDir = f'{data_dir}/{name}_{nameComplement}_tfrecords'
     
-    dataset, _ = tfds.load(
+    dataset, info = tfds.load(
         name=name, 
         with_info=with_info, 
         as_supervised=as_supervised, 
         data_dir=data_dir)
     train = dataset[sliceNames[0]]
-    test = dataset[sliceNames[1]]
+    test = dataset[sliceNames[1]] if sliceNames[1] in dataset else None
+
+    nEntriesTrain = info.splits[sliceNames[0]].num_examples
+    nEntriesTest = info.splits[sliceNames[1]].num_examples if test != None else 0
+    nEntries = nEntriesTrain+nEntriesTest
+    maxStorageGigs = 5
+    maxStorage = 133415085*maxStorageGigs
 
     retData = None
 
     #se o dataset ainda não foi criado
     if not os.path.exists(outputDir):
-        alteredTrain = train
-        alteredTest = test
+        alteredTrain = None
+        alteredTest = None
         if(transformationFunction != None):
-            alteredTrain = train.map(transformationFunction)
-            alteredTest = test.map(transformationFunction)
-        
-        train = list(alteredTrain.as_numpy_iterator())
-        test  = list(alteredTest.as_numpy_iterator())
-        train.extend(test)
+            alteredTrain = map(transformationFunction, train.as_numpy_iterator())
+            alteredTest = map(transformationFunction, test.as_numpy_iterator()) if test != None else None
+        else:
+            alteredTrain = train.as_numpy_iterator()
+            alteredTest  = test.as_numpy_iterator() if test != None else None
+    
+        entries = None
+    
+        nPixels = 1
+        alteredTrain, tst = itertools.tee(alteredTrain)
+        shape = next(tst)[0].shape
+        for n in shape:
+            nPixels *= n
 
-        imgs = np.array([i[0] for i in train])
-        lbls = np.array([i[1] for i in train])
+        maxStorageImgs = int(np.floor(maxStorage/nPixels))
+
+        if(nEntries < maxStorageImgs):
+            entries = list(alteredTrain)
+            if test != None:
+                test  = list(alteredTest)
+                entries.extend(test)
+        else:
+            if(nEntriesTrain < maxStorageImgs):
+                testIncluded = maxStorageImgs - nEntriesTrain
+                entries = list(alteredTrain)
+                if test != None:
+                    test  = list(itertools.islice(alteredTest, testIncluded))
+                    entries.extend(test)
+            else:
+                entries = list(itertools.islice(alteredTrain, maxStorageImgs))
+
+        imgs = np.array([i[0] for i in entries])
+        lbls = np.array([i[1] for i in entries])
 
         if(filterFunction != None):
             imgs, lbls = filterFunction(imgs, lbls)
@@ -222,3 +252,18 @@ def unbalance(imgs, lbls, minClassInstances, nClasses):
     unbalancedImgs = np.array(unbalancedImgs)
     unbalancedLbls = np.array(unbalancedLbls)
     return unbalancedImgs, unbalancedLbls
+
+def resizeImg(imgSide, index, entry):
+        img = entry[index]
+        w = img.shape[0]
+        h = img.shape[1]
+        side = np.min([w,h])
+        cw, ch = int(w/2 - side/2), int(h/2 - side/2)
+        img = np.asarray(PIL.Image.fromarray(img[cw:cw+side, ch:ch+side]).resize(size=(imgSide,imgSide)))
+        ret = None
+        try:
+            ret = entry[:index] + (img,) + entry[index + 1:]
+        except:
+            ret = entry
+            ret[index] = img
+        return ret

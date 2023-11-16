@@ -2,9 +2,9 @@ from Modules.Datasets.Dataset import Dataset
 from Modules.Shared.helper import *
 from Modules.Shared.config import *
 
-class TEST(Dataset):
+class QUICKDRAW(Dataset):
     def loadParams(self):
-        self.params.datasetName = Datasets.TEST
+        self.params.datasetName = Datasets.QUICKDRAW
         self.params.datasetNameComplement = 'default'
         
         self.params.nClasses = 345

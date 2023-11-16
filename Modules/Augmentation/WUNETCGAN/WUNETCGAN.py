@@ -51,6 +51,11 @@ class WUNETCGAN(GANFramework):
         raise ValueError("WUNETCGAN.discDownscale must be overriten") 
         return model
 
+    def embeddingProcessing(self, model):
+        ret = layers.Embedding(self.nClasses, self.genWidth*self.genHeight)(model)
+        ret = layers.Reshape((self.genWidth, self.genHeight, 1))(ret)
+        return ret
+
     def __init__(self, params: Params, extraParams = None, nameComplement = ""):
         self.name = self.__class__.__name__ + "_" +  nameComplement
 
@@ -73,8 +78,8 @@ class WUNETCGAN(GANFramework):
         X = layers.Reshape((self.genWidth, self.genHeight, self.noiseDepth))(noise)
     
         label = keras.Input(shape=(1,), name = 'gen_input_label')
-        embeddedLabels= layers.Embedding(self.nClasses, self.genWidth*self.genHeight)(label)
-        reshapedLabels = layers.Reshape((self.genWidth, self.genHeight, 1))(embeddedLabels)
+        reshapedLabels = self.embeddingProcessing(label)
+        
         X = layers.concatenate([X, reshapedLabels])
 
         X = self.genUpscale(X)
@@ -127,7 +132,7 @@ class WUNETCGAN(GANFramework):
             self.optDiscr = Adam(learning_rate=self.initLr, beta_1 = 0.5, beta_2=0.9)#Adam(learning_rate = self.initLr, beta_1 = 0.5, beta_2=0.9)
             self.optGan = Adam(learning_rate=self.initLr, beta_1 = 0.5, beta_2=0.9)#Adam(learning_rate = self.initLr*10, beta_1=0.5, beta_2=0.9)
 
-        self.discriminator.compile(loss=wasserstein_loss, optimizer=self.optDiscr, metrics=[my_distance, 'accuracy'])
+        self.discriminator.compile(loss=wasserstein_loss, optimizer=self.optDiscr, metrics=[my_distance, 'categorical_accuracy'])
 
         self.discriminator.trainable = False
         cganNoiseInput = Input(shape=(self.noiseDim,))

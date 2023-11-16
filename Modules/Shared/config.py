@@ -16,6 +16,7 @@ from Modules.Augmentation.GAN.GAN_CIFAR_10 import GAN_CIFAR_10
 from Modules.Augmentation.CGAN.CGAN_CIFAR_10 import CGAN_CIFAR_10
 from Modules.Augmentation.WCGAN.WCGAN_CIFAR_10 import WCGAN_CIFAR_10
 from Modules.Augmentation.WUNETCGAN.WUNETCGAN_CIFAR_10 import WUNETCGAN_CIFAR_10
+from Modules.Augmentation.WUNETCGAN.WUNETCGAN_QUICKDRAW import WUNETCGAN_QUICKDRAW
 
 from Modules.Augmentation.DATASET_DIRECTLY import DATASET_DIRECTLY
 from Modules.Augmentation.MIXED import MIXED
@@ -28,7 +29,8 @@ class Datasets:
     CIFAR_10 = "cifar10"
     IMAGENET = "imagenet_resized/32x32"
     FLOWERS = "tf_flowers"
-    TEST = "tf_flowers"
+    QUICKDRAW = "quickdraw_bitmap"
+    TEST = "quickdraw_bitmap"
 
 class Augmentators:
     GAN = "gan"
@@ -66,6 +68,8 @@ def getAugmentators(augmentator, params:Params, extraParams = None, nameCompleme
             return [WUNETCGAN_CIFAR_10(params, extraParams, name)]
         if(params.datasetName == Datasets.FLOWERS):
             return [WUNETCGAN_CIFAR_10(params, extraParams, name)]
+        if(params.datasetName == Datasets.QUICKDRAW):
+            return [WUNETCGAN_QUICKDRAW(params, extraParams, name)]
     if(augmentator == Augmentators.DIRECT):
         return [DATASET_DIRECTLY(params, extraParams, name)]
     if(augmentator == Augmentators.MIXED):

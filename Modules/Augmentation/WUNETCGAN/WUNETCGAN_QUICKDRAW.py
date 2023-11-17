@@ -33,25 +33,25 @@ class WUNETCGAN_QUICKDRAW(WUNETCGAN):
         self.gan = None 
 
         self.uNetChannels = 32
-        self.uNetRatio = 1.25
-        self.uNetBlocks = 1
+        self.uNetRatio = 1.5
+        self.uNetBlocks = 2
     
     def genUpscale(self, model):
-        model = self.TransposedBlock(model, 2, 64, kernelSize=5)
-        model = self.TransposedBlock(model, 2, 64)
+        model = self.TransposedBlock(model, 3, 32)
+        model = self.TransposedBlock(model, 3, 32)
         return model
     
     def discDownscale(self, model):
-        model = self.ResidualBlock(model, 2, 64, stride=2)
-        model = self.ResidualBlock(model, 2, 64, stride=2)
-        model = self.ResidualBlock(model, 2, 64)
+        model = self.ResidualBlock(model, 4, 128, stride=2)
+        model = self.ResidualBlock(model, 4, 128, stride=2)
+        model = self.ResidualBlock(model, 4, 128)
         return model
     
     def embeddingProcessing(self, model):
         ret = layers.Embedding(self.nClasses, self.genWidth*self.genHeight*5)(model)
-        ret = layers.Dense(self.genWidth*self.genHeight*3)(ret)
+        ret = layers.Dense(self.genWidth*self.genHeight*5)(ret)
         ret = layers.LeakyReLU(alpha=self.leakyReluAlpha)(ret)
-        ret = layers.Dense(self.genWidth*self.genHeight)(ret)
+        ret = layers.Dense(self.genWidth*self.genHeight*5)(ret)
         ret = layers.LeakyReLU(alpha=self.leakyReluAlpha)(ret)
-        ret = layers.Reshape((self.genWidth, self.genHeight, 1))(ret)
+        ret = layers.Reshape((self.genWidth, self.genHeight, 5))(ret)
         return ret

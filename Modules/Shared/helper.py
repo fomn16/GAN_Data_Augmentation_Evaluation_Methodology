@@ -26,6 +26,8 @@ from keras import backend as K
 import pickle
 
 '''
+sudo apt install gcc
+sudo apt install g++
 pip install tensorflow tensorflow-addons scikit-learn pandas ipython pillow matplotlib tensorflow_datasets imgaug seaborn pydot annoy trimap
 '''
 

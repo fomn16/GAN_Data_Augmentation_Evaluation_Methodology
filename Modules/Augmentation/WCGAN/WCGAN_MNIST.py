@@ -25,7 +25,7 @@ class WCGAN_MNIST(WCGAN):
 
         self.clipValue = 0.01
 
-        self.ganEpochs = 50
+        self.ganEpochs = 11
         self.batchSize = 128
         self.extraDiscEpochs = 3
         self.generator = None

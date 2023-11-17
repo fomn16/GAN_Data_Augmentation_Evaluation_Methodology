@@ -46,7 +46,7 @@ class Classifier_MNIST(Benchmark):
             self.classifier, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '.png')
         )
 
-        optClass = Adam(learning_rate = self.initLr, beta_1 = 0.5, decay = self.initLr/self.nEpochs)
+        optClass = Adam(learning_rate = self.initLr, beta_1 = 0.5)
         self.classifier.compile(loss='categorical_crossentropy', optimizer=optClass)
 
         self.classifier.save(verifiedFolder(self.basePath + "/modelSaves/init/fold_" + str(self.currentFold)))

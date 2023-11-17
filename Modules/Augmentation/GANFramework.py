@@ -197,5 +197,5 @@ class GANFramework(Augmentator):
         self.discriminator.save_weights(verifiedFolder(epochPath + '/disc_weights'))
         self.generator.save_weights(verifiedFolder(epochPath + '/gen_weights'))
 
-        saveParam(self.name + '_disc_opt_lr', np.float64(self.optDiscr._decayed_lr('float32').numpy()))
-        saveParam(self.name + '_gan_opt_lr', np.float64(self.optGan._decayed_lr('float32').numpy()))
+        saveParam(self.name + '_disc_opt_lr', np.float64(self.optDiscr.learning_rate.numpy()))
+        saveParam(self.name + '_gan_opt_lr', np.float64(self.optGan.learning_rate.numpy()))

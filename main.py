@@ -50,13 +50,13 @@ else:
 datasets : List[Dataset] = []
 
 #datasets.append(TEST(params))
+datasets.append(MNIST(params))
+datasets.append(FLOWERS(params))
+datasets.append(CIFAR_10(params))
+datasets.append(MNIST_UNBALANCED(params))
+datasets.append(CIFAR_10_UNBALANCED(params))
 datasets.append(QUICKDRAW(params))
-#datasets.append(MNIST(params))
-#datasets.append(FLOWERS(params))
-#datasets.append(CIFAR_10(params))
-#datasets.append(MNIST_UNBALANCED(params))
-#datasets.append(CIFAR_10_UNBALANCED(params))
-#datasets.append(IMAGENET(params))
+datasets.append(IMAGENET(params))
 for fold in range(params.currentFold, params.kFold):
     params.currentFold = fold
     saveParam('params_currentFold', params.currentFold)
@@ -68,11 +68,11 @@ for fold in range(params.currentFold, params.kFold):
         dataset.load()
 
         augmentators : List[Augmentator] = []
-        #augmentators.extend(getAugmentators(Augmentators.GAN, params))
-        #augmentators.extend(getAugmentators(Augmentators.CGAN, params))
-        #augmentators.extend(getAugmentators(Augmentators.WCGAN, params))
+        augmentators.extend(getAugmentators(Augmentators.GAN, params))
+        augmentators.extend(getAugmentators(Augmentators.CGAN, params))
+        augmentators.extend(getAugmentators(Augmentators.WCGAN, params))
         augmentators.extend(getAugmentators(Augmentators.WUNETCGAN, params))
-        #augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
+        augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
         #augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,1}]))
 
         loadedAugmentatorId = loadParam('current_augmentator_id', 0)

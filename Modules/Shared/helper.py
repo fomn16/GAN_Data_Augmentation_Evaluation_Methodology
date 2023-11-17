@@ -26,7 +26,7 @@ from keras import backend as K
 import pickle
 
 '''
-pip install tensorflow==2.10 tensorflow-addons==0.20.0 scikit-learn pandas ipython pillow matplotlib tensorflow_datasets==4.8.3 imgaug seaborn pydot
+pip install tensorflow tensorflow-addons scikit-learn pandas ipython pillow matplotlib tensorflow_datasets imgaug seaborn pydot annoy trimap
 '''
 
 #Funções helper para apresentação de imagens e dados de treinamento

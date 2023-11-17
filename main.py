@@ -51,11 +51,11 @@ datasets : List[Dataset] = []
 
 #datasets.append(TEST(params))
 datasets.append(MNIST(params))
-datasets.append(FLOWERS(params))
-datasets.append(CIFAR_10(params))
 datasets.append(MNIST_UNBALANCED(params))
+datasets.append(CIFAR_10(params))
 datasets.append(CIFAR_10_UNBALANCED(params))
 datasets.append(QUICKDRAW(params))
+datasets.append(FLOWERS(params))
 datasets.append(IMAGENET(params))
 for fold in range(params.currentFold, params.kFold):
     params.currentFold = fold

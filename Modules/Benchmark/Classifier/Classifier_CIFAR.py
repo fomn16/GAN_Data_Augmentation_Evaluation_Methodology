@@ -8,7 +8,6 @@ from Modules.Augmentation.Augmentator import Augmentator
 from Modules.Benchmark.Benchmark import Benchmark
 
 class Classifier_CIFAR(Benchmark):
-    #constantes
     leakyReluAlpha = 0.2
     FCOutputDim = 512
     initLr = 2e-4
@@ -37,10 +36,8 @@ class Classifier_CIFAR(Benchmark):
         classX = layers.Conv2D(filters=64, kernel_size=(4,4), padding='same', strides=(2,2), activation='relu')(classX)
         classX = layers.Conv2D(filters=128, kernel_size=(3,3), padding='same', strides=(2,2), activation='relu')(classX)
 
-        # camada densa
         classX = layers.Flatten()(classX)
 
-        # camada de output, chassificador one hot
         classOutput = layers.Dense(self.nClasses, activation='sigmoid', name='genOutput_label')(classX)
 
         self.classifier = keras.Model(inputs = classInput, outputs = classOutput, name = 'classifier')

@@ -8,7 +8,6 @@ from Modules.Augmentation.Augmentator import Augmentator
 from Modules.Benchmark.Benchmark import Benchmark
 
 class Classifier_MNIST(Benchmark):
-    #constantes
     leakyReluAlpha = 0.2
     FCOutputDim = 512
     initLr = 2e-4
@@ -33,16 +32,12 @@ class Classifier_MNIST(Benchmark):
 
     def __create(self):
         classInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'classinput')
-        # primeira camada convolucional, recebe formato das imagens
         classX = layers.Conv2D(filters=32, kernel_size=(5,5), padding='same', strides=(2,2), activation='relu')(classInput)
 
-        # segunda camada convolucional.
         classX = layers.Conv2D(filters=64, kernel_size=(5,5), padding='same', strides=(2,2), activation='relu')(classX)
 
-        # camada densa
         classX = layers.Flatten()(classX)
 
-        # camada de output, chassificador one hot
         classOutput = layers.Dense(self.nClasses, activation='sigmoid', name='genOutput_label')(classX)
 
         self.classifier = keras.Model(inputs = classInput, outputs = classOutput, name = 'classifier')

@@ -8,26 +8,21 @@ from Modules.Augmentation.Augmentator import Augmentator
 from Modules.Shared.Params import Params
 
 def wasserstein_loss(y_true, y_pred):
-    y_true = tf.cast(y_true, y_pred.dtype)#K.cast(y_true, dtype=tf.float32)
+    y_true = tf.cast(y_true, y_pred.dtype)
     return -K.mean(y_true * y_pred)
 
 def my_distance(y_true, y_pred):
-    #input range is [-1,1]
-    y_true = tf.cast(y_true, y_pred.dtype)  # Ensure the same data type
+    y_true = tf.cast(y_true, y_pred.dtype)
     return tf.reduce_mean(tf.abs(y_true - y_pred))
 
 def my_accuracy(y_true, y_pred):
-    #input range is [-1,1]
-    y_true = tf.cast(y_true, y_pred.dtype)  # Ensure the same data type
-    
-    # Calculate the signs of y_true and y_pred
+    y_true = tf.cast(y_true, y_pred.dtype)
+
     y_true_sign = tf.sign(y_true)
     y_pred_sign = tf.sign(y_pred)
-    
-    # Calculate the element-wise equality of signs
+
     sign_equal = tf.equal(y_true_sign, y_pred_sign)
     
-    # Calculate the percentage of time with the same sign
     return tf.reduce_mean(tf.cast(sign_equal, tf.float32)) * 100.0
 
 def shuffle_no_repeat(imgs, lbls):

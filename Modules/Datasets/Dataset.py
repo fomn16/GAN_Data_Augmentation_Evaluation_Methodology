@@ -4,7 +4,6 @@ from Modules.Shared.helper import *
 from Modules.Shared.Params import Params
 from Modules.Shared.config import *
 
-#imgs => [w][h][-1,1], lbls => [0,1]
 class Dataset:
     def __init__(self, params:Params):
         self.params = params
@@ -47,7 +46,7 @@ class Dataset:
         #número total de instâncias
         self.totalInstances = lbls.shape[0]
         #número de instâncias em cada divisão do fold que vai para treinamento
-        self.n_instances_fold_train = int(np.floor((self.totalInstances/self.params.kFold)))
+        self.n_instances_fold_train = int(np.floor((self.totalInstances/self.params.kFold)*0.25))
         #numero de instâncias de treinamento nesse fold
         self.trainInstances = self.n_instances_fold_train*(self.params.kFold - 1)
         #numero de instâncias de teste nesse fold

@@ -18,7 +18,6 @@ class TSNE_INCEPTION(Benchmark):
     nClasses = 10
     enlargedWidth = 84
     enlargedHeight = 84
-    #carrega dataset
     inceptionBatchSize = 250
 
     def __init__(self, params: Params, nameComplement = ""):
@@ -102,7 +101,9 @@ class TSNE_INCEPTION(Benchmark):
         gs_dts = trimap.TRIMAP(verbose=False).global_score(p[0], lde_dts)
         gs_den = trimap.TRIMAP(verbose=False).global_score(p[1], lde_gen)
         gs_comp = trimap.TRIMAP(verbose=False).global_score(p[0], lde_gen)
+        
         message = "Trimap gloal score.\n-combined embeddings: " + str(gs) + "\n-dataset embeddings: " + str(gs_dts) + "\n-generated image embeddings: " + str(gs_den) + "\n-comparative embeddings: " + str(gs_comp)
+        
         print(message)
         infoFile = open(self.basePath + '/info.txt', 'a')
         infoFile.write(message)

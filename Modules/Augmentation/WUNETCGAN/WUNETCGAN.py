@@ -71,10 +71,8 @@ class WUNETCGAN(GANFramework):
 
         self.loadConstants()
         
-    #Cria model geradora com keras functional API
     def createGenModel(self):
         noise = keras.Input(shape=(self.noiseDim,), name = 'gen_input_gaussian_distribution')
-        # Faz reshape para dimensões espaciais desejadas
         X = layers.Reshape((self.genWidth, self.genHeight, self.noiseDepth))(noise)
     
         label = keras.Input(shape=(1,), name = 'gen_input_label')
@@ -98,7 +96,6 @@ class WUNETCGAN(GANFramework):
             self.generator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/generator.png')
         )
     
-    #Cria model discriminadora com functional API
     def createDiscModel(self):
         img1 = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'disc_input_img_1')
         img2 = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'disc_input_img_2')
@@ -116,7 +113,6 @@ class WUNETCGAN(GANFramework):
             self.discriminator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/discriminator.png')
         )
 
-    #compilando discriminador e gan
     def compile(self):
         epochPath = self.basePath + '/modelSaves/fold_' + str(self.currentFold) + '/epoch_' + str(loadParam(self.name + '_current_epoch'))
         
@@ -126,11 +122,11 @@ class WUNETCGAN(GANFramework):
         if(self.params.continuing):
             self.discriminator.load_weights(verifiedFolder(epochPath + '/disc_weights'))
             self.generator.load_weights(verifiedFolder(epochPath + '/gen_weights'))
-            self.optDiscr = Adam(learning_rate=loadParam(self.name + '_disc_opt_lr'), beta_1 = 0.5, beta_2=0.9)#Adam(learning_rate = self.initLr, beta_1 = 0.5, beta_2=0.9)
-            self.optGan = Adam(learning_rate=loadParam(self.name + '_gan_opt_lr'), beta_1 = 0.5, beta_2=0.9)#Adam(learning_rate = self.initLr*10, beta_1=0.5, beta_2=0.9)
+            self.optDiscr = Adam(learning_rate=loadParam(self.name + '_disc_opt_lr'), beta_1 = 0.5, beta_2=0.9)
+            self.optGan = Adam(learning_rate=loadParam(self.name + '_gan_opt_lr'), beta_1 = 0.5, beta_2=0.9)
         else:
-            self.optDiscr = Adam(learning_rate=self.initLr, beta_1 = 0.5, beta_2=0.9)#Adam(learning_rate = self.initLr, beta_1 = 0.5, beta_2=0.9)
-            self.optGan = Adam(learning_rate=self.initLr, beta_1 = 0.5, beta_2=0.9)#Adam(learning_rate = self.initLr*10, beta_1=0.5, beta_2=0.9)
+            self.optDiscr = Adam(learning_rate=self.initLr, beta_1 = 0.5, beta_2=0.9)
+            self.optGan = Adam(learning_rate=self.initLr, beta_1 = 0.5, beta_2=0.9)
 
         self.discriminator.compile(loss=wasserstein_loss, optimizer=self.optDiscr, metrics=[my_distance, 'categorical_accuracy'])
 
@@ -152,7 +148,6 @@ class WUNETCGAN(GANFramework):
         if(not self.params.continuing):
             self.saveModel()
 
-    #treinamento GAN
     def train(self, dataset: Dataset):
         print('started ' + self.name + ' training')
         self.testImgs, self.testLbls = dataset.getTestData(0, 20)
@@ -169,7 +164,6 @@ class WUNETCGAN(GANFramework):
             discLossHist = loadParam(self.name + '_disc_loss_hist')
             genLossHist = loadParam(self.name + '_gen_loss_hist')
         else:
-            #noise e labels de benchmark
             benchNoise = np.random.uniform(-1,1, size=(self.batchSize,self.noiseDim))
             benchLabels = np.random.randint(0,self.nClasses, size = (self.batchSize))
             for i in range(20):
@@ -180,8 +174,6 @@ class WUNETCGAN(GANFramework):
             saveParam(self.name + '_current_epoch', 0)
             saveParam(self.name + '_disc_loss_hist', [])
             saveParam(self.name + '_gen_loss_hist', [])
-
-            #benchLabels = np.array([[1 if i == bl else -1 for i in range(self.nClasses)] for bl in benchLabels], dtype='float32')
         
         nBatches = int(dataset.trainInstances/self.batchSize) - self.extraDiscEpochs
 
@@ -247,7 +239,6 @@ class WUNETCGAN(GANFramework):
             if(self.params.saveModels):
                 self.saveModel(epoch, genLossHist, discLossHist)
                 
-    #Gera e salva imagens
     def saveGenerationExample(self, nEntries = 20):
         benchNoise = np.random.uniform(-1,1, size=(20,self.noiseDim))
         images = self.generator.predict([benchNoise, self.testLbls, self.testImgs])

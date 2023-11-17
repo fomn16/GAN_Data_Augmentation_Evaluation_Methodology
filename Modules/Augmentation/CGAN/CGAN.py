@@ -61,11 +61,9 @@ class CGAN(GANFramework):
 
         self.loadConstants()
     
-    #Cria model geradora com keras functional API
     def createGenModel(self):
         cgenNoiseInput = keras.Input(shape=(self.noiseDim,), name = 'genInput_randomDistribution')
 
-        # Faz reshape para dimensões espaciais desejadas
         cgenX = layers.Reshape((self.genWidth, self.genHeight, self.noiseDepth))(cgenNoiseInput)
     
         labelInput = keras.Input(shape=(1,), name = 'genInput_label')
@@ -83,7 +81,6 @@ class CGAN(GANFramework):
             self.generator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/generator.png')
         )
 
-    #Cria model discriminadora com functional API
     def createDiscModel(self):
         discInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'discinput_img')
 
@@ -94,7 +91,6 @@ class CGAN(GANFramework):
 
         discX = self.discDownscale(discX)
 
-        # nó de output, mapear em -1 ou 1
         discX = Conv2D(1, self.genWidth, kernel_initializer='glorot_uniform', activation='linear')(discX)
         discOutput = Flatten(name = 'discoutput_realvsfake')(discX)
 
@@ -104,7 +100,6 @@ class CGAN(GANFramework):
             self.discriminator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/discriminator.png')
         )
 
-    #compilando discriminador e gan
     def compile(self):
         epochPath = self.basePath + '/modelSaves/fold_' + str(self.currentFold) + '/epoch_' + str(loadParam(self.name + '_current_epoch'))
         
@@ -139,7 +134,6 @@ class CGAN(GANFramework):
         if(not self.params.continuing):
             self.saveModel()
 
-    #treinamento GAN
     def train(self, dataset: Dataset):
         print('started ' + self.name + ' training')
         discLossHist = []
@@ -154,7 +148,6 @@ class CGAN(GANFramework):
             discLossHist = loadParam(self.name + '_disc_loss_hist')
             genLossHist = loadParam(self.name + '_gen_loss_hist')
         else:
-            #noise e labels de benchmark
             benchNoise = np.random.uniform(-1,1, size=(256,self.noiseDim))
             benchLabels = np.random.randint(0,self.nClasses, size = (256))
             for i in range(20):
@@ -165,8 +158,6 @@ class CGAN(GANFramework):
             saveParam(self.name + '_current_epoch', 0)
             saveParam(self.name + '_disc_loss_hist', [])
             saveParam(self.name + '_gen_loss_hist', [])
-
-            #benchLabels = np.array([[1 if i == bl else -1 for i in range(self.nClasses)] for bl in benchLabels], dtype='float32')
         
         nBatches = int(dataset.trainInstances/self.batchSize) - self.extraDiscEpochs
 
@@ -181,7 +172,6 @@ class CGAN(GANFramework):
                     
                     genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                     labelInput = np.random.randint(0,self.nClasses, size = (self.batchSize))
-                    #labelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in labelInput], dtype='float32')
                     
                     genImgOutput = self.generator.predict([genInput, labelInput], verbose=0)
 
@@ -217,7 +207,6 @@ class CGAN(GANFramework):
             if((self.params.saveModels and epoch%5 == 0) or epoch == self.ganEpochs-1):
                 self.saveModel(epoch, genLossHist, discLossHist)
                 
-    #Gera e salva imagens
     def saveGenerationExample(self, nEntries = 20):
         noise = np.random.uniform(-1,1, size=(5*self.nClasses,self.noiseDim))
         labels = np.floor(np.array(range(5*self.nClasses))/5)

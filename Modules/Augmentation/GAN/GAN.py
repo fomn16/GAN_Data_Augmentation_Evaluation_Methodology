@@ -63,30 +63,22 @@ class GAN(GANFramework):
 
         self.loadConstants()
 
-    #Cria model geradora com keras functional API
     def createGenModel(self):
         genInput = keras.Input(shape=(self.noiseDim,), name = 'geninput_randomdistribution')
 
-        # cria camada de entrada, com noiseDim entradas, saída de tamanho sCOutputDim, e ativação relu
-        # entrada -> tamanho escolhido
         genX = layers.Dense(self.genFCOutputDim)(genInput)
         genX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(genX)
         genX = layers.Dropout(self.dropoutParam)(genX)
 
-        # cria camada que converte saída da primeira camada para o número de nós necessário na entrada
-        # das camadas convolucionais
         genX = layers.Dense(units=self.genWidth*self.genHeight*self.genDepth)(genX)
         genX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(genX)
         genX = layers.BatchNormalization()(genX)
 
         labelOutput = layers.Dense(self.nClasses, activation='tanh', name='genoutput_label')(genX)
 
-        # Faz reshape para dimensões espaciais desejadas
         genX = layers.Reshape((self.genWidth, self.genHeight, self.genDepth))(genX)
         model = self.genUpscale(genX)
 
-        # camada convolucional que tem como output a imagem de saída
-        # tanh é usado pois é necessária saída de espaço limitado
         genOutput = layers.Conv2D(filters=self.imgChannels, kernel_size=(3,3), padding='same', activation='tanh',  name = 'genOutput_img', kernel_regularizer=regularizers.l2(self.l2RegParam))(model)
 
         self.generator = keras.Model(inputs = genInput, outputs = [genOutput, labelOutput], name = 'generator')
@@ -95,7 +87,6 @@ class GAN(GANFramework):
             self.generator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/generator.png')
         )
 
-    #Cria model discriminadora com functional API
     def createDiscModel(self):
         discInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'discinput_img')
 
@@ -103,7 +94,6 @@ class GAN(GANFramework):
 
         discX = layers.BatchNormalization(axis=-1)(discX)
 
-        # camada densa
         discX = layers.Flatten()(discX)
 
         discX = layers.Dense(self.discFCOutputDim, activation="tanh")(discX)
@@ -116,7 +106,6 @@ class GAN(GANFramework):
         discX = layers.LeakyReLU(alpha=self.leakyReluAlpha)(discX)
         discX = layers.Dropout(self.dropoutParam)(discX)
 
-        # nó de output, sigmoid->mapear em 0 ou 1
         discOutput = layers.Dense(1, activation='sigmoid', name = 'discoutput_realvsfake')(discX)
 
         self.discriminator = keras.Model(inputs = [discInput, labelInput], outputs = discOutput, name = 'discriminator')
@@ -125,7 +114,6 @@ class GAN(GANFramework):
             self.discriminator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/discriminator.png')
         )
 
-    #compilando discriminador e gan
     def compile(self):
         epochPath = self.basePath + '/modelSaves/fold_' + str(self.currentFold) + '/epoch_' + str(loadParam(self.name + '_current_epoch'))
 
@@ -158,7 +146,6 @@ class GAN(GANFramework):
         if(not self.params.continuing):
             self.saveModel()
 
-    #treinamento GAN
     def train(self, dataset:Dataset):
         discLossHist = []
         genLossHist = []
@@ -172,7 +159,6 @@ class GAN(GANFramework):
             discLossHist = loadParam(self.name + '_disc_loss_hist')
             genLossHist = loadParam(self.name + '_gen_loss_hist')
         else:
-            #noise e labels de benchmark
             benchNoise = np.random.uniform(-1,1, size=(256,self.noiseDim))
             benchLabels = np.random.randint(0,self.nClasses, size = (256))
             for i in range(20):
@@ -225,7 +211,6 @@ class GAN(GANFramework):
             if((self.params.saveModels and epoch%5 == 0) or epoch == self.ganEpochs-1):
                 self.saveModel(epoch, genLossHist, discLossHist)
 
-    #Gera e salva imagens
     def saveGenerationExample(self, nEntries=20):
         noise = np.random.uniform(-1,1, size=(nEntries,self.noiseDim))
         images, labels = self.generator.predict(noise)

@@ -80,7 +80,7 @@ for fold in range(params.currentFold, params.kFold):
             saveParam('current_augmentator_id', loadedAugmentatorId)
             loadedAugmentatorId+=1
             if(augmentator != None):
-                #treina
+                #treinamento
                 augmentator.compile()
                 augmentator.train(dataset)
 

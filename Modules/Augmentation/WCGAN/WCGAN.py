@@ -63,11 +63,9 @@ class WCGAN(GANFramework):
 
         self.loadConstants()
     
-    #Cria model geradora com keras functional API
     def createGenModel(self):
         cgenNoiseInput = keras.Input(shape=(self.noiseDim,), name = 'genInput_randomDistribution')
 
-        # Faz reshape para dimensões espaciais desejadas
         cgenX = layers.Reshape((self.genWidth, self.genHeight, self.noiseDepth))(cgenNoiseInput)
     
         labelInput = keras.Input(shape=(1,), name = 'genInput_label')
@@ -85,7 +83,6 @@ class WCGAN(GANFramework):
             self.generator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/generator.png')
         )
 
-    #Cria model discriminadora com functional API
     def createDiscModel(self):
         discInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'discinput_img')
 
@@ -96,7 +93,6 @@ class WCGAN(GANFramework):
 
         discX = self.discDownscale(discX)
 
-        # nó de output, mapear em -1 ou 1
         discX = Conv2D(1, self.genWidth, kernel_initializer='glorot_uniform', activation='linear')(discX)
         discOutput = Flatten(name = 'discoutput_realvsfake')(discX)
 
@@ -106,7 +102,6 @@ class WCGAN(GANFramework):
             self.discriminator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/discriminator.png')
         )
 
-    #compilando discriminador e gan
     def compile(self):
         epochPath = self.basePath + '/modelSaves/fold_' + str(self.currentFold) + '/epoch_' + str(loadParam(self.name + '_current_epoch'))
         
@@ -116,11 +111,11 @@ class WCGAN(GANFramework):
         if(self.params.continuing):
             self.discriminator.load_weights(verifiedFolder(epochPath + '/disc_weights'))
             self.generator.load_weights(verifiedFolder(epochPath + '/gen_weights'))
-            self.optDiscr = RMSprop(learning_rate=loadParam(self.name + '_disc_opt_lr'))#Adam(learning_rate = self.initLr, beta_1 = 0.5, beta_2=0.9)
-            self.optGan = RMSprop(learning_rate=loadParam(self.name + '_gan_opt_lr'))#Adam(learning_rate = self.initLr*10, beta_1=0.5, beta_2=0.9)
+            self.optDiscr = RMSprop(learning_rate=loadParam(self.name + '_disc_opt_lr'))
+            self.optGan = RMSprop(learning_rate=loadParam(self.name + '_gan_opt_lr'))
         else:
-            self.optDiscr = RMSprop(learning_rate=self.initLr)#Adam(learning_rate = self.initLr, beta_1 = 0.5, beta_2=0.9)
-            self.optGan = RMSprop(learning_rate=self.initLr)#Adam(learning_rate = self.initLr*10, beta_1=0.5, beta_2=0.9)
+            self.optDiscr = RMSprop(learning_rate=self.initLr)
+            self.optGan = RMSprop(learning_rate=self.initLr)
 
         self.discriminator.compile(loss=wasserstein_loss, optimizer=self.optDiscr, metrics=[my_distance, my_accuracy])
 
@@ -141,7 +136,6 @@ class WCGAN(GANFramework):
         if(not self.params.continuing):
             self.saveModel()
 
-    #treinamento GAN
     def train(self, dataset: Dataset):
         print('started ' + self.name + ' training')
         discLossHist = []
@@ -156,7 +150,6 @@ class WCGAN(GANFramework):
             discLossHist = loadParam(self.name + '_disc_loss_hist')
             genLossHist = loadParam(self.name + '_gen_loss_hist')
         else:
-            #noise e labels de benchmark
             benchNoise = np.random.uniform(-1,1, size=(256,self.noiseDim))
             benchLabels = np.random.randint(0,self.nClasses, size = (256))
             for i in range(20):
@@ -167,8 +160,6 @@ class WCGAN(GANFramework):
             saveParam(self.name + '_current_epoch', 0)
             saveParam(self.name + '_disc_loss_hist', [])
             saveParam(self.name + '_gen_loss_hist', [])
-
-            #benchLabels = np.array([[1 if i == bl else -1 for i in range(self.nClasses)] for bl in benchLabels], dtype='float32')
         
         nBatches = int(dataset.trainInstances/self.batchSize) - self.extraDiscEpochs
 
@@ -183,7 +174,6 @@ class WCGAN(GANFramework):
                     
                     genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                     labelInput = np.random.randint(0,self.nClasses, size = (self.batchSize))
-                    #labelInput = np.array([[1 if i == li else -1 for i in range(self.nClasses)] for li in labelInput], dtype='float32')
                     
                     genImgOutput = self.generator.predict([genInput, labelInput], verbose=0)
 
@@ -224,7 +214,6 @@ class WCGAN(GANFramework):
             if((self.params.saveModels and epoch%5 == 0) or epoch == self.ganEpochs-1):
                 self.saveModel(epoch, genLossHist, discLossHist)
                 
-    #Gera e salva imagens
     def saveGenerationExample(self, nEntries = 20):
         noise = np.random.uniform(-1,1, size=(5*self.nClasses,self.noiseDim))
         labels = np.floor(np.array(range(5*self.nClasses))/5)

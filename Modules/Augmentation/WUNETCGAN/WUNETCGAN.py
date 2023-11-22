@@ -34,6 +34,7 @@ class WUNETCGAN(GANFramework):
         self.uNetChannels = 32
         self.uNetRatio = 1.5
         self.uNetBlocks = 3
+        self.uNetDropout = False
         
         raise ValueError("WUNETCGAN.loadConstants must be overriten") 
     
@@ -86,7 +87,7 @@ class WUNETCGAN(GANFramework):
 
         X = layers.concatenate([X, imageInput])
 
-        X = self.UNet(X, self.uNetChannels, self.uNetRatio, self.uNetBlocks)
+        X = self.UNet(X, self.uNetChannels, self.uNetRatio, self.uNetBlocks, dropout=self.uNetDropout)
 
         output = Conv2D(filters=self.imgChannels, kernel_size=1, padding='same', activation='tanh',  name = 'gen_output', kernel_initializer='glorot_uniform')(X)
         
@@ -118,17 +119,19 @@ class WUNETCGAN(GANFramework):
         
         self.createDiscModel()
         self.createGenModel()
+        lr_schedule_disc = ExponentialDecay(self.initLr, staircase = False, decay_steps=100000, decay_rate=0.96)
+        lr_schedule_gan = ExponentialDecay(self.initLr, staircase = False, decay_steps=100000, decay_rate=0.96)
 
         if(self.params.continuing):
             self.discriminator.load_weights(verifiedFolder(epochPath + '/disc_weights'))
             self.generator.load_weights(verifiedFolder(epochPath + '/gen_weights'))
-            self.optDiscr = Adam(learning_rate=loadParam(self.name + '_disc_opt_lr'), beta_1 = 0.5, beta_2=0.9)
-            self.optGan = Adam(learning_rate=loadParam(self.name + '_gan_opt_lr'), beta_1 = 0.5, beta_2=0.9)
+            self.optDiscr = Adam(learning_rate=lr_schedule_disc, beta_1 = 0.5, beta_2=0.9)
+            self.optGan = Adam(learning_rate=lr_schedule_gan, beta_1 = 0.5, beta_2=0.9)
         else:
-            self.optDiscr = Adam(learning_rate=self.initLr, beta_1 = 0.5, beta_2=0.9)
-            self.optGan = Adam(learning_rate=self.initLr, beta_1 = 0.5, beta_2=0.9)
+            self.optDiscr = Adam(learning_rate=lr_schedule_disc, beta_1 = 0.5, beta_2=0.9)
+            self.optGan = Adam(learning_rate=lr_schedule_gan, beta_1 = 0.5, beta_2=0.9)
 
-        self.discriminator.compile(loss=wasserstein_loss, optimizer=self.optDiscr, metrics=[my_distance, 'categorical_accuracy'])
+        self.discriminator.compile(loss=wasserstein_loss, optimizer=self.optDiscr, metrics=[my_distance, my_accuracy])
 
         self.discriminator.trainable = False
         cganNoiseInput = Input(shape=(self.noiseDim,))

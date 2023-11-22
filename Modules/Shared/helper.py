@@ -2,6 +2,7 @@
 from keras.models import Sequential, Model, load_model
 from keras.layers import Dense, BatchNormalization, Reshape, Conv2DTranspose, Conv2D, LeakyReLU, Flatten, Dropout, Embedding
 from keras.optimizers import Adam, RMSprop
+from tensorflow.keras.optimizers.schedules import ExponentialDecay
 from sklearn.utils import shuffle
 from sklearn.metrics import classification_report, roc_auc_score
 import pandas as pd

@@ -25,7 +25,7 @@ class WUNETCGAN_MNIST(WUNETCGAN):
 
         self.clipValue = 0.01
 
-        self.ganEpochs = 25
+        self.ganEpochs = 100
         self.batchSize = 128
         self.extraDiscEpochs = 5
         self.generator = None
@@ -35,6 +35,7 @@ class WUNETCGAN_MNIST(WUNETCGAN):
         self.uNetChannels = 32
         self.uNetRatio = 1.5
         self.uNetBlocks = 1
+        self.uNetDropout = False
     
     def genUpscale(self, model):
         model = self.TransposedBlock(model, 1, 8)

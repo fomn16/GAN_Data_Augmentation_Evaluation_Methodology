@@ -25,19 +25,19 @@ class WCGAN_MNIST(WCGAN):
 
         self.clipValue = 0.01
 
-        self.ganEpochs = 11
+        self.ganEpochs = 75
         self.batchSize = 128
-        self.extraDiscEpochs = 3
+        self.extraDiscEpochs = 5
         self.generator = None
         self.discriminator = None
         self.gan = None
 
     def genUpscale(self, model):
         model = self.TransposedBlock(model, 2, 64, dropout=False)
-        model = self.TransposedBlock(model, 2, 64, dropout=False)
+        model = self.TransposedBlock(model, 1, 64, dropout=False)
         return model
     
     def discDownscale(self, model):
-        model = self.Block(model, 2, 64)
-        model = self.Block(model, 2, 64)
+        model = self.Block(model, 2, 64, dropout=False, kernelSize=5, batchNorm=False)
+        model = self.Block(model, 1, 64, dropout=False, batchNorm=False)
         return model

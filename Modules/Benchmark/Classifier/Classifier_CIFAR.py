@@ -91,7 +91,14 @@ class Classifier_CIFAR(Benchmark):
         classOutput = self.classifier.predict(imgs, verbose=0)
         classOutput = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in classOutput]
         lbls = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in lbls]
-        report = classification_report(lbls, classOutput) + '\nauroc score: ' + str(roc_auc_score(lbls, classOutput)) + '\n'
+
+        aurocScore = ""
+        try:
+            aurocScore = str(roc_auc_score(lbls, classOutput))
+        except:
+            aurocScore = "error calculating:\n" + str(lbls) + "\n" + str(classOutput)
+
+        report = classification_report(lbls, classOutput) + '\nauroc score: ' + aurocScore + '\n'
 
         print(report)
         infoFile = open(self.basePath + '/info.txt', 'a')

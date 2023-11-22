@@ -35,6 +35,7 @@ class WUNETCGAN_QUICKDRAW(WUNETCGAN):
         self.uNetChannels = 32
         self.uNetRatio = 1.5
         self.uNetBlocks = 2
+        self.uNetDropout = False
     
     def genUpscale(self, model):
         model = self.TransposedBlock(model, 3, 32)

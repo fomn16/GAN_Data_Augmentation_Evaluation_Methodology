@@ -17,13 +17,18 @@ def my_distance(y_true, y_pred):
 
 def my_accuracy(y_true, y_pred):
     y_true = tf.cast(y_true, y_pred.dtype)
+    if len(y_true.shape) > 1 and y_true.shape[1] > 1:
+        y_true_class = tf.argmax(y_true, axis=-1)
+        y_pred_class = tf.argmax(y_pred, axis=-1)
 
-    y_true_sign = tf.sign(y_true)
-    y_pred_sign = tf.sign(y_pred)
+        class_equal = tf.equal(y_true_class, y_pred_class)
+        return tf.reduce_mean(tf.cast(class_equal, tf.float32)) * 100.0
+    else:
+        y_true_sign = tf.sign(y_true)
+        y_pred_sign = tf.sign(y_pred)
 
-    sign_equal = tf.equal(y_true_sign, y_pred_sign)
-    
-    return tf.reduce_mean(tf.cast(sign_equal, tf.float32)) * 100.0
+        sign_equal = tf.equal(y_true_sign, y_pred_sign)
+        return tf.reduce_mean(tf.cast(sign_equal, tf.float32)) * 100.0
 
 def shuffle_no_repeat(imgs, lbls):
     n = len(imgs)

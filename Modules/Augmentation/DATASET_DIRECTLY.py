@@ -38,4 +38,5 @@ class DATASET_DIRECTLY(Augmentator):
         nEntries = srcLbls.shape[0]
         if(self.dataposition + nEntries >= self.dataset.trainInstances):
             self.dataposition = 0
-        return self.dataset.getTrainData(self.dataposition, self.dataposition+nEntries)
+        img, data = self.dataset.getTrainData(self.dataposition, self.dataposition+nEntries)
+        return img.copy(), data.copy()

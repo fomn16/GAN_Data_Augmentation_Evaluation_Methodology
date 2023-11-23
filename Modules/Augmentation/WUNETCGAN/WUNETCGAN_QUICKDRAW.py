@@ -33,19 +33,19 @@ class WUNETCGAN_QUICKDRAW(WUNETCGAN):
         self.gan = None 
 
         self.uNetChannels = 32
-        self.uNetRatio = 1.5
+        self.uNetRatio = 2
         self.uNetBlocks = 2
         self.uNetDropout = False
     
     def genUpscale(self, model):
-        model = self.TransposedBlock(model, 3, 32)
-        model = self.TransposedBlock(model, 3, 32)
+        model = self.TransposedBlock(model, 1, 16)
+        model = self.TransposedBlock(model, 1, 8)
         return model
     
     def discDownscale(self, model):
-        model = self.ResidualBlock(model, 4, 128, stride=2)
-        model = self.ResidualBlock(model, 4, 128, stride=2)
-        model = self.ResidualBlock(model, 4, 128)
+        model = self.ResidualBlock(model, 3, 32, stride=2)
+        model = self.ResidualBlock(model, 3, 64, stride=2)
+        model = self.ResidualBlock(model, 3, 128)
         return model
     
     def embeddingProcessing(self, model):

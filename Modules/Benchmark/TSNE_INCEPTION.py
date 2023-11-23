@@ -80,8 +80,6 @@ class TSNE_INCEPTION(Benchmark):
             infoFile = open(self.basePath + '/info.txt', 'a')
             infoFile.write("Generating inception descriptors, batch " + str(i) + "/" + str(nBatches)+'\n')
             infoFile.close()
-        del testImgs
-        del testLbls
         del genImgs
         del genLbls
         del out

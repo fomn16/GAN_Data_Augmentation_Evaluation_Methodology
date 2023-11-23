@@ -262,4 +262,4 @@ class WUNETCGAN(GANFramework):
             self.compile()
         genImages = self.generator.predict([noise, srcLbls, srcImgs])
         print(self.name + ": finished data generation")
-        return genImages, srcLbls
+        return genImages, srcLbls.copy()

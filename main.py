@@ -50,9 +50,9 @@ else:
 datasets : List[Dataset] = []
 
 #datasets.append(TEST(params))
-datasets.append(MNIST(params))
+#datasets.append(MNIST(params))
 #datasets.append(MNIST_UNBALANCED(params))
-#datasets.append(CIFAR_10(params))
+datasets.append(CIFAR_10(params))
 #datasets.append(CIFAR_10_UNBALANCED(params))
 #datasets.append(QUICKDRAW(params))
 #datasets.append(FLOWERS(params))
@@ -68,9 +68,9 @@ for fold in range(params.currentFold, params.kFold):
         dataset.load()
 
         augmentators : List[Augmentator] = []
-        augmentators.extend(getAugmentators(Augmentators.GAN, params))
-        augmentators.extend(getAugmentators(Augmentators.CGAN, params))
-        augmentators.extend(getAugmentators(Augmentators.WCGAN, params))
+        #augmentators.extend(getAugmentators(Augmentators.GAN, params))
+        #augmentators.extend(getAugmentators(Augmentators.CGAN, params))
+        #augmentators.extend(getAugmentators(Augmentators.WCGAN, params))
         augmentators.extend(getAugmentators(Augmentators.WUNETCGAN, params))
         augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
         #augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,1}]))
@@ -98,7 +98,7 @@ for fold in range(params.currentFold, params.kFold):
                     if(benchmark != None):
                         benchmark.train(augmentator, dataset)
                         benchmark.runTest(dataset)
-
+        sys.exit()
         saveParam('current_augmentator_id', 0)
         dataset.unload()
     saveParam('current_dataset_id', 0)

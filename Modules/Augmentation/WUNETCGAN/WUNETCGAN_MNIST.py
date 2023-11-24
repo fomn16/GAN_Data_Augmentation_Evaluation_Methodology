@@ -25,7 +25,7 @@ class WUNETCGAN_MNIST(WUNETCGAN):
 
         self.clipValue = 0.01
 
-        self.ganEpochs = 100
+        self.ganEpochs = 50
         self.batchSize = 128
         self.extraDiscEpochs = 5
         self.generator = None
@@ -33,7 +33,7 @@ class WUNETCGAN_MNIST(WUNETCGAN):
         self.gan = None 
 
         self.uNetChannels = 32
-        self.uNetRatio = 1.5
+        self.uNetRatio = 1.25
         self.uNetBlocks = 1
         self.uNetDropout = False
     
@@ -43,7 +43,7 @@ class WUNETCGAN_MNIST(WUNETCGAN):
         return model
     
     def discDownscale(self, model):
-        model = self.ResidualBlock(model, 2, 64, stride=2)
-        model = self.ResidualBlock(model, 2, 64, stride=2)
-        model = self.ResidualBlock(model, 2, 64)
+        model = self.ResidualBlock(model, 1, 16, stride=2)
+        model = self.ResidualBlock(model, 1, 32, stride=2)
+        model = self.ResidualBlock(model, 1, 64)
         return model

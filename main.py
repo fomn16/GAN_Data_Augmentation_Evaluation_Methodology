@@ -73,7 +73,14 @@ for fold in range(params.currentFold, params.kFold):
         #augmentators.extend(getAugmentators(Augmentators.WCGAN, params))
         augmentators.extend(getAugmentators(Augmentators.WUNETCGAN, params))
         augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
-        #augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,1}]))
+
+        for i in range (10,100,10):
+            n=i/100
+            augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,1}, [n,1-n]], str(i)+'_'+str(100-i)))
+            augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,1}, [1,n]], '100_'+str(i)))
+            augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,1}, [n,1]], str(i)+'_100'))
+        
+        augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,1}, [1,1]], '100_100'))
 
         loadedAugmentatorId = loadParam('current_augmentator_id', 0)
         for augmentator in augmentators[loadedAugmentatorId:]:
@@ -90,7 +97,7 @@ for fold in range(params.currentFold, params.kFold):
 
                 #cria testes
                 benchmarks : List[Benchmark] = []
-                benchmarks.extend(getBenchmarks(Benchmarks.TSNE_INCEPTION, params))
+                #benchmarks.extend(getBenchmarks(Benchmarks.TSNE_INCEPTION, params))
                 benchmarks.extend(getBenchmarks(Benchmarks.CLASSIFIER, params))
 
                 #percorre os testes

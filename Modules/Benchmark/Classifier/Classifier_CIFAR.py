@@ -87,14 +87,8 @@ class Classifier_CIFAR(Benchmark):
 
     def runTest(self, dataset: Dataset):
         imgs, lbls = dataset.getTestData(0, dataset.testInstances)
-        infoFile = open(self.basePath + '/teste.txt', 'a')
-        infoFile.write(str(lbls))
-        infoFile.close()
         lbls = np.array([[1 if i == lbl else 0 for i in range(self.nClasses)] for lbl in lbls], dtype='float32')
         classOutput = self.classifier.predict(imgs, verbose=0)
-        infoFile = open(self.basePath + '/teste2.txt', 'a')
-        infoFile.write(str(classOutput))
-        infoFile.close()
         classOutput = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in classOutput]
         lbls = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in lbls]
 

@@ -10,6 +10,12 @@ class MIXED(Augmentator):
     def __init__(self, params:Params, extraParams = None, nameComplement = ""):
         arr = extraParams[0]
         ids = extraParams[1]
+
+        if(len(extraParams) > 2 and extraParams[2] != None):
+            self.percentages = extraParams[2]
+        else:
+            self.percentages = [1] * len(ids)
+
         self.name = '_'.join([arr[id].name for id in ids]) + '_' + self.__class__.__name__ + '_' + nameComplement
 
         self.currentFold = params.currentFold
@@ -21,8 +27,12 @@ class MIXED(Augmentator):
         imgs = []
         lbls = []
         
-        for id in self.ids:
-            _imgs, _lbls = self.arr[id].generate(srcImgs, srcLbls)
+        for i, id in enumerate(self.ids):
+            #filtrando a porcentagem requisitada do augmentator de origem
+            _srcImgs, _srcLbls = shuffle(srcImgs, srcLbls)
+            n = int(_srcLbls.shape[0] * self.percentages[i])
+            _imgs, _lbls = self.arr[id].generate(_srcImgs[:n], _srcLbls[:n])
+
             if(len(imgs) == 0):
                 imgs = _imgs
                 lbls = _lbls

@@ -33,8 +33,8 @@ class WUNETCGAN_CIFAR_10(WUNETCGAN):
         self.gan = None 
 
         self.uNetChannels = 32
-        self.uNetRatio = 2
-        self.uNetBlocks = 2
+        self.uNetRatio = 1.5
+        self.uNetBlocks = 3
         self.uNetDropout = False
     
     def genUpscale(self, model):

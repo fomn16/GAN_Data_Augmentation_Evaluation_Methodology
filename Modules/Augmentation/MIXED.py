@@ -4,6 +4,7 @@ from Modules.Shared.helper import *
 
 from Modules.Augmentation.Augmentator import Augmentator
 from Modules.Shared.Params import Params
+from Modules.Datasets.Dataset import Dataset
 
 #Importante: Assume que os geradores recebidos já foram inicializados, compilados e treinados
 class MIXED(Augmentator):
@@ -29,7 +30,7 @@ class MIXED(Augmentator):
         
         for i, id in enumerate(self.ids):
             #filtrando a porcentagem requisitada do augmentator de origem
-            _srcImgs, _srcLbls = shuffle(srcImgs, srcLbls)
+            (_srcImgs, _srcLbls) = shuffle(srcImgs, srcLbls)
             n = int(_srcLbls.shape[0] * self.percentages[i])
             _imgs, _lbls = self.arr[id].generate(_srcImgs[:n], _srcLbls[:n])
 
@@ -42,3 +43,7 @@ class MIXED(Augmentator):
 
         (imgs,lbls) = shuffle(imgs,lbls)
         return imgs, lbls
+
+    def verifyInitialization(self, dataset: Dataset):
+        for id in self.ids:
+            self.arr[id].verifyInitialization(dataset)

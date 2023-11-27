@@ -117,7 +117,6 @@ class GAN(GANFramework):
     def compile(self):
         epochPath = self.basePath + '/modelSaves/fold_' + str(self.currentFold) + '/epoch_' + str(loadParam(self.name + '_current_epoch'))
 
-        
         self.createDiscModel()
         self.createGenModel()
 
@@ -147,6 +146,7 @@ class GAN(GANFramework):
             self.saveModel()
 
     def train(self, dataset:Dataset):
+        print('started ' + self.name + ' training')
         discLossHist = []
         genLossHist = []
         benchNoise = None
@@ -198,9 +198,9 @@ class GAN(GANFramework):
                 if i == nBatches-1:
                     discLossHist.append(discLoss)
                     genLossHist.append(ganLoss)
-                    print("Epoch " + str(epoch) + "\nGAN (generator training) loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss))
+                    print("Epoch " + str(epoch) + "\ngenerator training loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss))
                     infoFile = open(self.basePath + '/info.txt', 'a')
-                    infoFile.write("Epoch " + str(epoch) + "\nGAN (generator training) loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss) + '\n')
+                    infoFile.write("Epoch " + str(epoch) + "\ngenerator training loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss) + '\n')
                     infoFile.close()
 
                     images, labels = self.generator.predict(benchNoise)

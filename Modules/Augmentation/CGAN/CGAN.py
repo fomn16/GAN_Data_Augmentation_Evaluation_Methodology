@@ -193,9 +193,9 @@ class CGAN(GANFramework):
                     discLossHist.append(discLoss)
                     genLossHist.append(ganLoss)
 
-                    print("Epoch " + str(epoch) + "\nCGAN (generator training) loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss))
+                    print("Epoch " + str(epoch) + "\ngenerator loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss))
                     infoFile = open(self.basePath + '/info.txt', 'a')
-                    infoFile.write("Epoch " + str(epoch) + "\nCGAN (generator training) loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss)+ '\n')
+                    infoFile.write("Epoch " + str(epoch) + "\ngenerator training loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss)+ '\n')
                     infoFile.close()
 
                     images = self.generator.predict([benchNoise, benchLabels])
@@ -220,8 +220,6 @@ class CGAN(GANFramework):
         genInput = np.random.uniform(-1,1,size=(nEntries,self.noiseDim))
         genLabelInput = np.random.randint(0,self.nClasses, size = (nEntries))
 
-        if(self.generator is None):
-            self.compile()
         genImages = self.generator.predict([genInput, genLabelInput])
         print(self.name + ": finished data generation")
         return genImages, genLabelInput

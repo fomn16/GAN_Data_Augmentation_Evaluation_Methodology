@@ -40,3 +40,6 @@ class DATASET_DIRECTLY(Augmentator):
             self.dataposition = 0
         img, data = self.dataset.getTrainData(self.dataposition, self.dataposition+nEntries)
         return img.copy(), data.copy()
+    
+    def verifyInitialization(self, dataset: Dataset):
+        self.dataset = dataset

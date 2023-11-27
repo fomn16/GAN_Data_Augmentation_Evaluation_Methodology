@@ -103,6 +103,7 @@ for fold in range(params.currentFold, params.kFold):
                 #percorre os testes
                 for benchmark in benchmarks:
                     if(benchmark != None):
+                        augmentator.verifyInitialization(dataset)
                         benchmark.train(augmentator, dataset)
                         benchmark.runTest(dataset)
         sys.exit()

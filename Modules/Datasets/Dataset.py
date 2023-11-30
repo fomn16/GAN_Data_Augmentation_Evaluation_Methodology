@@ -8,7 +8,7 @@ class Dataset:
     def __init__(self, params:Params):
         self.params = params
         self.loadParams()
-        self.name = params.datasetName + "_" + self.params.datasetNameComplement
+        self.name = params.datasetName + addToName(self.params.datasetNameComplement)
     
     def loadParams(self):
         self.params.datasetName = Datasets.MNIST
@@ -25,10 +25,10 @@ class Dataset:
         self.slices = ['train', 'test']
     
     def getTrainData(self, start, end):
-        return self.trainImgs[start:end], self.trainLbls[start:end]
+        return self.trainImgs[start:end].copy(), self.trainLbls[start:end].copy()
 
     def getTestData(self, start, end):
-        return self.testImgs[start:end], self.testLbls[start:end]
+        return self.testImgs[start:end].copy(), self.testLbls[start:end].copy()
     
     def load(self):
         self.loadParams()
@@ -46,7 +46,7 @@ class Dataset:
         #número total de instâncias
         self.totalInstances = lbls.shape[0]
         #número de instâncias em cada divisão do fold que vai para treinamento
-        self.n_instances_fold_train = int(np.floor((self.totalInstances/self.params.kFold)*0.25))
+        self.n_instances_fold_train = int(np.floor((self.totalInstances/self.params.kFold)))
         #numero de instâncias de treinamento nesse fold
         self.trainInstances = self.n_instances_fold_train*(self.params.kFold - 1)
         #numero de instâncias de teste nesse fold

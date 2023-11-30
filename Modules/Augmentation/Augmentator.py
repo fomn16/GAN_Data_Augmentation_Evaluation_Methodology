@@ -4,6 +4,7 @@ from Modules.Shared.helper import *
 from Modules.Shared.Params import Params
 
 from Modules.Datasets.Dataset import Dataset
+from Modules.Shared.Saving import *
 
 class Augmentator:
     name = None
@@ -21,3 +22,10 @@ class Augmentator:
 
     def generate(self, srcImgs, srcLbls):
         pass
+    
+    def verifyInitialization(self, dataset: Dataset):
+        if(self.generator is None):
+            if(loadParam(self.name + '_current_epoch', 0) == 0):
+                saveParam(self.name + '_current_epoch', self.ganEpochs-1)
+                self.params.continuing = True
+            self.compile()

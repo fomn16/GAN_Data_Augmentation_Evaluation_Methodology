@@ -8,7 +8,7 @@ from Modules.Shared.Params import Params
 
 class DATASET_DIRECTLY(Augmentator):
     def __init__(self, params:Params, extraParams = None, nameComplement = ""):
-        self.name = self.__class__.__name__ + "_" + params.datasetName + "_" + nameComplement
+        self.name = self.__class__.__name__ + "(" + params.datasetName + addToName(nameComplement) + ")"
 
         self.currentFold = params.currentFold
         self.nClasses = params.nClasses
@@ -38,4 +38,8 @@ class DATASET_DIRECTLY(Augmentator):
         nEntries = srcLbls.shape[0]
         if(self.dataposition + nEntries >= self.dataset.trainInstances):
             self.dataposition = 0
-        return self.dataset.getTrainData(self.dataposition, self.dataposition+nEntries)
+        img, data = self.dataset.getTrainData(self.dataposition, self.dataposition+nEntries)
+        return img.copy(), data.copy()
+    
+    def verifyInitialization(self, dataset: Dataset):
+        self.dataset = dataset

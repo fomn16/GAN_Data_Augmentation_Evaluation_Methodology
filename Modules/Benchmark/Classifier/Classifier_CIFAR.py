@@ -15,7 +15,7 @@ class Classifier_CIFAR(Benchmark):
     batchSize = 128
 
     def __init__(self, params: Params, nameComplement = ""):
-        self.name = self.__class__.__name__ + "_" +  nameComplement
+        self.name = self.__class__.__name__ + addToName("(" +  nameComplement + ")")
 
         self.nClasses = params.nClasses
         self.basePath = verifiedFolder('runtime_' + params.runtime + '/trainingStats/' + self.name)
@@ -38,15 +38,16 @@ class Classifier_CIFAR(Benchmark):
 
         classX = layers.Flatten()(classX)
 
-        classOutput = layers.Dense(self.nClasses, activation='sigmoid', name='genOutput_label')(classX)
+        classOutput = layers.Dense(self.nClasses, activation='softmax', name='genOutput_label')(classX)
 
         self.classifier = keras.Model(inputs = classInput, outputs = classOutput, name = 'classifier')
 
+        self.classifier.summary()
         keras.utils.plot_model(
             self.classifier, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '.png')
         )
 
-        optClass = Adam(learning_rate = self.initLr, beta_1 = 0.5, decay = self.initLr/self.nEpochs)
+        optClass = Adam(learning_rate = self.initLr, beta_1 = 0.5)
         self.classifier.compile(loss='categorical_crossentropy', optimizer=optClass)
 
         self.classifier.save(verifiedFolder(self.basePath + "/modelSaves/init/fold_" + str(self.currentFold)))
@@ -91,7 +92,14 @@ class Classifier_CIFAR(Benchmark):
         classOutput = self.classifier.predict(imgs, verbose=0)
         classOutput = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in classOutput]
         lbls = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in lbls]
-        report = classification_report(lbls, classOutput) + '\nauroc score: ' + str(roc_auc_score(lbls, classOutput)) + '\n'
+
+        aurocScore = ""
+        try:
+            aurocScore = str(roc_auc_score(lbls, classOutput))
+        except:
+            aurocScore = "error calculating:\n" + str(lbls) + "\n" + str(classOutput)
+
+        report = classification_report(lbls, classOutput) + '\nauroc score: ' + aurocScore + '\n'
 
         print(report)
         infoFile = open(self.basePath + '/info.txt', 'a')

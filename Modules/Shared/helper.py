@@ -2,6 +2,7 @@
 from keras.models import Sequential, Model, load_model
 from keras.layers import Dense, BatchNormalization, Reshape, Conv2DTranspose, Conv2D, LeakyReLU, Flatten, Dropout, Embedding
 from keras.optimizers import Adam, RMSprop
+from tensorflow.keras.optimizers.schedules import ExponentialDecay
 from sklearn.utils import shuffle
 from sklearn.metrics import classification_report, roc_auc_score
 import pandas as pd
@@ -26,6 +27,8 @@ from keras import backend as K
 import pickle
 
 '''
+sudo apt install gcc
+sudo apt install g++
 pip install tensorflow tensorflow-addons scikit-learn pandas ipython pillow matplotlib tensorflow_datasets imgaug seaborn pydot annoy trimap
 '''
 
@@ -164,12 +167,14 @@ def LoadDataset(name, with_info,as_supervised,data_dir,nameComplement,sliceNames
         retData = imgs, lbls
     return retData
 
-def unbalance(imgs, lbls, minClassInstances, nClasses):
+def unbalance(imgs, lbls, minClassPercent, nClasses):
     tempCounter = [0]*nClasses
     for i in range(len(lbls)):
         tempCounter[lbls[i]] += 1
-    maxClassInstances = np.max(tempCounter)
-    coeff = (maxClassInstances - minClassInstances)/(nClasses-1)
+    maxClassCount = np.max(tempCounter)
+    minClassCount = np.min(tempCounter)
+    minClassInstances = int(minClassCount*minClassPercent)
+    coeff = (maxClassCount - minClassInstances)/(nClasses-1)
     unbalancedImgs = []
     unbalancedLbls = []
     counter = [0]*nClasses
@@ -197,3 +202,8 @@ def resizeImg(imgSide, index, entry):
             ret = entry
             ret[index] = img
         return ret
+
+def addToName(s):
+    if(s is not None and s != ""):
+        return "_" + s
+    return ""

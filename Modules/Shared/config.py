@@ -45,7 +45,7 @@ class Benchmarks:
     TSNE_INCEPTION = "tsne_inception"
 
 def getAugmentators(augmentator, params:Params, extraParams = None, nameComplement = "") -> List[Augmentator]:
-    name = params.datasetNameComplement + "_" +  nameComplement
+    name = params.datasetNameComplement + addToName(nameComplement)
     if(augmentator == Augmentators.GAN):
         if(params.datasetName == Datasets.MNIST):
             return [GAN_MNIST(params, extraParams, name)]
@@ -77,7 +77,7 @@ def getAugmentators(augmentator, params:Params, extraParams = None, nameCompleme
     return [None]
 
 def getBenchmarks(benchmark, params: Params, nameComplement = "") -> List[Benchmark]:
-    name = params.datasetNameComplement + "_" + nameComplement
+    name = params.datasetNameComplement + addToName(nameComplement)
     if(benchmark == Benchmarks.CLASSIFIER):
         if(params.datasetName == Datasets.MNIST):
             return [Classifier_MNIST(params, name)]

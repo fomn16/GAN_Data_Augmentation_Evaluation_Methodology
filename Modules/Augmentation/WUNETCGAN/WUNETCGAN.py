@@ -34,20 +34,22 @@ class WUNETCGAN(GANFramework):
         self.uNetChannels = 32
         self.uNetRatio = 1.5
         self.uNetBlocks = 3
+        self.uNetDropout = False
+        self.uNetBatchNorm = True
         
         raise ValueError("WUNETCGAN.loadConstants must be overriten") 
     
     def genUpscale(self, model):
-        model = self.TransposedBlock(model, 2, 32)
-        model = self.TransposedBlock(model, 2, 32)
-        model = self.TransposedBlock(model, 2, 6)
+        model = self.TransposedBlock(model, 2, 16, dropout=False)
+        model = self.TransposedBlock(model, 2, 32, dropout=False)
+        model = self.TransposedBlock(model, 2, 8, dropout=False)
         raise ValueError("WUNETCGAN.genUpscale must be overriten") 
         return model
     
     def discDownscale(self, model):
-        model = self.InceptionBlock(model, 2, 32, stride=2)
-        model = self.InceptionBlock(model, 2, 32, stride=2)
-        model = self.InceptionBlock(model, 2, 32, stride=2)
+        model = self.InceptionBlock(model, 3, 32, stride=2, dropout=False)
+        model = self.InceptionBlock(model, 3, 64, stride=2, dropout=False)
+        model = self.InceptionBlock(model, 3, 128, stride=2, dropout=False)
         raise ValueError("WUNETCGAN.discDownscale must be overriten") 
         return model
 
@@ -57,7 +59,7 @@ class WUNETCGAN(GANFramework):
         return ret
 
     def __init__(self, params: Params, extraParams = None, nameComplement = ""):
-        self.name = self.__class__.__name__ + "_" +  nameComplement
+        self.name = self.__class__.__name__ + addToName("(" +  nameComplement + ")")
 
         self.currentFold = params.currentFold
         self.nClasses = params.nClasses
@@ -86,11 +88,12 @@ class WUNETCGAN(GANFramework):
 
         X = layers.concatenate([X, imageInput])
 
-        X = self.UNet(X, self.uNetChannels, self.uNetRatio, self.uNetBlocks)
+        X = self.UNet(X, self.uNetChannels, self.uNetRatio, self.uNetBlocks, dropout=self.uNetDropout, batchNorm=self.uNetBatchNorm)
 
         output = Conv2D(filters=self.imgChannels, kernel_size=1, padding='same', activation='tanh',  name = 'gen_output', kernel_initializer='glorot_uniform')(X)
         
         self.generator = keras.Model(inputs = [noise, label, imageInput], outputs = output, name = 'generator')
+        
         self.generator.summary()
         keras.utils.plot_model(
             self.generator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/generator.png')
@@ -104,10 +107,11 @@ class WUNETCGAN(GANFramework):
 
         X = self.discDownscale(X)
 
-        X = Conv2D(1 + self.nClasses, self.genWidth, kernel_initializer='glorot_uniform', activation='softmax')(X)
-        discOutput = Flatten(name = 'discoutput_realvsfake')(X)
+        X = Conv2D(2*self.nClasses, self.genWidth, kernel_initializer='glorot_uniform', activation='softmax')(X)
+        discOutput = Flatten(name = 'discoutput_class')(X)
 
         self.discriminator = keras.Model(inputs = [img1, img2], outputs = discOutput, name = 'discriminator')
+        
         self.discriminator.summary()
         keras.utils.plot_model(
             self.discriminator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/discriminator.png')
@@ -122,13 +126,16 @@ class WUNETCGAN(GANFramework):
         if(self.params.continuing):
             self.discriminator.load_weights(verifiedFolder(epochPath + '/disc_weights'))
             self.generator.load_weights(verifiedFolder(epochPath + '/gen_weights'))
-            self.optDiscr = Adam(learning_rate=loadParam(self.name + '_disc_opt_lr'), beta_1 = 0.5, beta_2=0.9)
-            self.optGan = Adam(learning_rate=loadParam(self.name + '_gan_opt_lr'), beta_1 = 0.5, beta_2=0.9)
-        else:
-            self.optDiscr = Adam(learning_rate=self.initLr, beta_1 = 0.5, beta_2=0.9)
-            self.optGan = Adam(learning_rate=self.initLr, beta_1 = 0.5, beta_2=0.9)
 
-        self.discriminator.compile(loss=wasserstein_loss, optimizer=self.optDiscr, metrics=[my_distance, 'categorical_accuracy'])
+        lr_schedule_disc = ExponentialDecay(self.initLr, staircase = False, decay_steps=100000, decay_rate=0.96)
+        lr_schedule_gan = ExponentialDecay(self.initLr, staircase = False, decay_steps=100000, decay_rate=0.96)
+        self.optDiscr = Adam(learning_rate=lr_schedule_disc, beta_1 = 0.5, beta_2=0.9)
+        self.optGan = Adam(learning_rate=lr_schedule_gan, beta_1 = 0.5, beta_2=0.9)
+
+        self.discriminator.compile( loss=wasserstein_loss, 
+                                    optimizer=self.optDiscr, 
+                                    metrics=[my_distance, my_accuracy]
+                                   )
 
         self.discriminator.trainable = False
         cganNoiseInput = Input(shape=(self.noiseDim,))
@@ -137,9 +144,12 @@ class WUNETCGAN(GANFramework):
         cganOutput =  self.discriminator([self.generator([cganNoiseInput, cganLabelInput, cganImgInput]), cganImgInput])
         self.gan = Model((cganNoiseInput, cganLabelInput, cganImgInput), cganOutput)
 
-        self.gan.compile(loss=wasserstein_loss, optimizer=self.optGan)
+        self.gan.compile(loss='categorical_focal_crossentropy', 
+                         optimizer=self.optGan
+                        )
         
         self.discriminator.trainable = True
+        
         self.gan.summary()
         keras.utils.plot_model(
             self.gan, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/gan.png')
@@ -185,23 +195,29 @@ class WUNETCGAN(GANFramework):
             for i in range(nBatches):
                 for j in range(self.extraDiscEpochs):
                     imgBatch, labelBatch = dataset.getTrainData((i+j)*self.batchSize, (i+j+1)*self.batchSize)
-
-                    imgsShuffled = shuffle_same_class(imgBatch, labelBatch, self.nClasses)
-                    imgsWrongClass, lblsWrongClass = shuffle_different_class(imgBatch, labelBatch, self.nClasses)
-
-                    genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
-                    imgsFake = self.generator.predict([genInput, labelBatch, imgBatch], verbose=0)
+                    (imgBatch, labelBatch) = shuffle(imgBatch, labelBatch)
+                    section = int(self.batchSize/3)
                     
-                    XImg    = np.concatenate((imgsShuffled, imgsFake, imgsWrongClass))
-                    XImg2   = np.concatenate((imgBatch, imgBatch, imgBatch))
+                    imgBatch = [imgBatch[0:section], imgBatch[section:2*section], imgBatch[2*section:]]
+                    labelBatch = [labelBatch[0:section], labelBatch[section:2*section], labelBatch[2*section:]]
 
+                    imgsShuffled = shuffle_same_class(imgBatch[0], labelBatch[0], self.nClasses)
 
-                    fake = [0] * self.nClasses + [1]
-                    fake = [fake for _ in range(self.batchSize)]
+                    genInput = np.random.uniform(-1,1,size=(section,self.noiseDim))
+                    imgsFake = self.generator.predict([genInput, labelBatch[1], imgBatch[1]], verbose=0)
 
-                    real = [[1 if i == c else 0 for c in range(self.nClasses + 1)] for i in labelBatch]
+                    imgsWrongClass, _ = shuffle_different_class(imgBatch[2], labelBatch[2], self.nClasses)
+                    
+                    XImg    = np.concatenate((imgsShuffled, imgsFake,       imgsWrongClass))
+                    XImg2   = np.concatenate((imgBatch[0],  imgBatch[1],    imgBatch[2]))
+
+                    classes = [
+                        [[1 if i == c else 0 for c in range(2*self.nClasses)] for i in labelBatch[0]],
+                        [[1 if i+self.nClasses == c else 0 for c in range(2*self.nClasses)] for i in labelBatch[1]],
+                        [[1 if i+self.nClasses == c else 0 for c in range(2*self.nClasses)] for i in labelBatch[2]],
+                        ]
                 
-                    y = np.array((real) + (fake) + (fake))
+                    y = np.array((classes[0]) + (classes[1]) + (classes[2]))
 
                     (XImg, XImg2, y) = shuffle(XImg, XImg2, y)
                     discLoss = self.discriminator.train_on_batch([XImg, XImg2], y)
@@ -213,7 +229,7 @@ class WUNETCGAN(GANFramework):
                 
                 imgBatch, labelBatch = dataset.getTrainData((i)*self.batchSize, (i+1)*self.batchSize)
                 genTrainNoise = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
-                y = np.array([[1 if i == c else 0 for c in range(self.nClasses + 1)] for i in labelBatch])
+                y = np.array([[1 if i == c else 0 for c in range(2*self.nClasses)] for i in labelBatch])
 
                 ganLoss = self.gan.train_on_batch([genTrainNoise, labelBatch, imgBatch],y)
 
@@ -255,8 +271,6 @@ class WUNETCGAN(GANFramework):
         nEntries = srcLbls.shape[0]
         print(self.name + ": started data generation")
         noise = np.random.uniform(-1,1,size=(nEntries,self.noiseDim))
-        if(self.generator is None):
-            self.compile()
         genImages = self.generator.predict([noise, srcLbls, srcImgs])
         print(self.name + ": finished data generation")
-        return genImages, srcLbls
+        return genImages, srcLbls.copy()

@@ -32,22 +32,41 @@ class CGAN(GANFramework):
         self.gan = None
         raise ValueError("CGAN.loadConstants must be overriten") 
     
+    def genInputProcessing(self, noise, label):
+        X = layers.Reshape((self.genWidth, self.genHeight, self.noiseDepth))(noise)
+        XLbl = layers.Embedding(self.nClasses, self.genWidth*self.genHeight)(label)
+        XLbl = layers.Reshape((self.genWidth, self.genHeight, 1))(XLbl)
+
+        X = layers.concatenate([X, XLbl])
+        return X
+        
     def genUpscale(self, model):
         model = self.TransposedBlock(model, 3, 64, 4)
         model = self.TransposedBlock(model, 3, 128, 4)
         model = self.TransposedBlock(model, 3, 256, 3)
         raise ValueError("CGAN.genUpscale must be overriten") 
         return model
-    
+
+    def discInputProcessing(self, image, label):
+        X = layers.Embedding(self.nClasses, self.imgWidth*self.imgHeight)(label)
+        X = layers.Reshape((self.imgWidth, self.imgHeight, 1))(X)
+        X = layers.concatenate([image, X])
+        return X
+
     def discDownscale(self, model):
         model = self.Block(model, 2, 64, 3)
         model = self.Block(model, 2, 128, 3)
         model = self.Block(model, 2, 256, 3)
         raise ValueError("CGAN.discDownscale must be overriten") 
         return model
+    
+    def discOutputProcessing(self, model):
+        X = Conv2D(1, self.genWidth, kernel_initializer='glorot_uniform', activation='linear')(model)
+        X = Flatten(name = 'discoutput_realvsfake')(X)
+        return X
 
     def __init__(self, params: Params, extraParams = None, nameComplement = ""):
-        self.name = self.__class__.__name__ + "_" +  nameComplement
+        self.name = self.__class__.__name__ + addToName("(" +  nameComplement + ")")
 
         self.currentFold = params.currentFold
         self.nClasses = params.nClasses
@@ -62,40 +81,35 @@ class CGAN(GANFramework):
         self.loadConstants()
     
     def createGenModel(self):
-        cgenNoiseInput = keras.Input(shape=(self.noiseDim,), name = 'genInput_randomDistribution')
+        noise = keras.Input(shape=(self.noiseDim,), name = 'genInput_randomDistribution')
+        label = keras.Input(shape=(1,), name = 'genInput_label')
 
-        cgenX = layers.Reshape((self.genWidth, self.genHeight, self.noiseDepth))(cgenNoiseInput)
-    
-        labelInput = keras.Input(shape=(1,), name = 'genInput_label')
-        embeddedLabels= layers.Embedding(self.nClasses, self.genWidth*self.genHeight)(labelInput)
-        reshapedLabels = layers.Reshape((self.genWidth, self.genHeight, 1))(embeddedLabels)
-        cgenX = layers.concatenate([cgenX, reshapedLabels])
+        X = self.genInputProcessing(noise, label)
 
-        model = self.genUpscale(cgenX)
+        X = self.genUpscale(X)
 
-        cgenOutput = Conv2D(filters=self.imgChannels, kernel_size=(3,3), padding='same', activation='tanh',  name = 'genOutput_img', kernel_initializer='glorot_uniform')(model)
+        cgenOutput = Conv2D(filters=self.imgChannels, kernel_size=(3,3), padding='same', activation='tanh',  name = 'genOutput_img', kernel_initializer='glorot_uniform')(X)
         
-        self.generator = keras.Model(inputs = [cgenNoiseInput, labelInput], outputs = cgenOutput, name = 'cgenerator')
+        self.generator = keras.Model(inputs = [noise, label], outputs = cgenOutput, name = 'cgenerator')
 
+        self.generator.summary()
         keras.utils.plot_model(
             self.generator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/generator.png')
         )
 
     def createDiscModel(self):
-        discInput = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'discinput_img')
+        image = keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgChannels), name = 'disc_image')
+        label = keras.Input(shape=(1,), name = 'disc_label')
 
-        labelInput = keras.Input(shape=(1,), name = 'discinput_label')
-        embeddedLabels = layers.Embedding(self.nClasses, self.imgWidth*self.imgHeight)(labelInput)
-        reshapedLabels = layers.Reshape((self.imgWidth, self.imgHeight, 1))(embeddedLabels)
-        discX = layers.concatenate([discInput, reshapedLabels])
+        X = self.discInputProcessing(image, label)
 
-        discX = self.discDownscale(discX)
+        X = self.discDownscale(X)
 
-        discX = Conv2D(1, self.genWidth, kernel_initializer='glorot_uniform', activation='linear')(discX)
-        discOutput = Flatten(name = 'discoutput_realvsfake')(discX)
+        X = self.discOutputProcessing(X)
 
-        self.discriminator = keras.Model(inputs = [discInput, labelInput], outputs = discOutput, name = 'discriminator')
+        self.discriminator = keras.Model(inputs = [image, label], outputs = X, name = 'discriminator')
 
+        self.discriminator.summary()
         keras.utils.plot_model(
             self.discriminator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/discriminator.png')
         )
@@ -109,11 +123,12 @@ class CGAN(GANFramework):
         if(self.params.continuing):
             self.discriminator.load_weights(verifiedFolder(epochPath + '/disc_weights'))
             self.generator.load_weights(verifiedFolder(epochPath + '/gen_weights'))
-            self.optDiscr = Adam(learning_rate = loadParam(self.name + '_disc_opt_lr'), beta_1=0.5, beta_2=0.9)
-            self.optGan  = Adam(learning_rate = loadParam(self.name + '_gan_opt_lr'),  beta_1=0.5, beta_2=0.9)
-        else:
-            self.optDiscr = Adam(learning_rate = self.initLr, beta_1=0.5, beta_2=0.9)
-            self.optGan  = Adam(learning_rate = self.initLr, beta_1=0.5, beta_2=0.9)
+
+        lr_schedule_disc = ExponentialDecay(self.initLr, staircase = False, decay_steps=100000, decay_rate=0.93)
+        lr_schedule_gan = ExponentialDecay(self.initLr, staircase = False, decay_steps=100000, decay_rate=0.93)
+            
+        self.optDiscr = Adam(learning_rate = lr_schedule_disc, beta_1=0.5, beta_2=0.9)
+        self.optGan  = Adam(learning_rate = lr_schedule_gan, beta_1=0.5, beta_2=0.9)
 
         self.discriminator.compile(loss='binary_crossentropy', optimizer=self.optDiscr, metrics=[my_distance, my_accuracy])
 
@@ -127,6 +142,7 @@ class CGAN(GANFramework):
         
         self.discriminator.trainable = True
 
+        self.gan.summary()
         keras.utils.plot_model(
             self.gan, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/gan.png')
         )
@@ -193,9 +209,9 @@ class CGAN(GANFramework):
                     discLossHist.append(discLoss)
                     genLossHist.append(ganLoss)
 
-                    print("Epoch " + str(epoch) + "\nCGAN (generator training) loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss))
+                    print("Epoch " + str(epoch) + "\ngenerator loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss))
                     infoFile = open(self.basePath + '/info.txt', 'a')
-                    infoFile.write("Epoch " + str(epoch) + "\nCGAN (generator training) loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss)+ '\n')
+                    infoFile.write("Epoch " + str(epoch) + "\ngenerator training loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss)+ '\n')
                     infoFile.close()
 
                     images = self.generator.predict([benchNoise, benchLabels])
@@ -220,8 +236,6 @@ class CGAN(GANFramework):
         genInput = np.random.uniform(-1,1,size=(nEntries,self.noiseDim))
         genLabelInput = np.random.randint(0,self.nClasses, size = (nEntries))
 
-        if(self.generator is None):
-            self.compile()
         genImages = self.generator.predict([genInput, genLabelInput])
         print(self.name + ": finished data generation")
         return genImages, genLabelInput

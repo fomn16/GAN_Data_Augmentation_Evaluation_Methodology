@@ -21,7 +21,7 @@ class TSNE_INCEPTION(Benchmark):
     inceptionBatchSize = 250
 
     def __init__(self, params: Params, nameComplement = ""):
-        self.name = self.__class__.__name__ + "_" +  nameComplement
+        self.name = self.__class__.__name__ + addToName("(" +  nameComplement + ")")
 
         self.nClasses = params.nClasses
         self.basePath = verifiedFolder('runtime_' + params.runtime + '/trainingStats/' + self.name + '/fold_' + str(params.currentFold))
@@ -80,8 +80,6 @@ class TSNE_INCEPTION(Benchmark):
             infoFile = open(self.basePath + '/info.txt', 'a')
             infoFile.write("Generating inception descriptors, batch " + str(i) + "/" + str(nBatches)+'\n')
             infoFile.close()
-        del testImgs
-        del testLbls
         del genImgs
         del genLbls
         del out

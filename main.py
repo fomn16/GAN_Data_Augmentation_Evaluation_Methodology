@@ -50,12 +50,12 @@ else:
 datasets : List[Dataset] = []
 
 #datasets.append(TEST(params))
-datasets.append(QUICKDRAW(params))
-#datasets.append(MNIST(params))
-#datasets.append(FLOWERS(params))
+datasets.append(MNIST(params))
+datasets.append(MNIST_UNBALANCED(params))
 #datasets.append(CIFAR_10(params))
-#datasets.append(MNIST_UNBALANCED(params))
 #datasets.append(CIFAR_10_UNBALANCED(params))
+#datasets.append(QUICKDRAW(params))
+#datasets.append(FLOWERS(params))
 #datasets.append(IMAGENET(params))
 for fold in range(params.currentFold, params.kFold):
     params.currentFold = fold
@@ -68,12 +68,20 @@ for fold in range(params.currentFold, params.kFold):
         dataset.load()
 
         augmentators : List[Augmentator] = []
-        #augmentators.extend(getAugmentators(Augmentators.GAN, params))
-        #augmentators.extend(getAugmentators(Augmentators.CGAN, params))
-        #augmentators.extend(getAugmentators(Augmentators.WCGAN, params))
+        augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
+        augmentators.extend(getAugmentators(Augmentators.GAN, params))
+        augmentators.extend(getAugmentators(Augmentators.CGAN, params))
         augmentators.extend(getAugmentators(Augmentators.WUNETCGAN, params))
-        #augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
-        #augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,1}]))
+        augmentators.extend(getAugmentators(Augmentators.WCGAN, params))
+
+        augLen = len(augmentators)
+        for j in range(1, augLen):
+            for i in range (10,100,10):
+                n=i/100
+                augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,j}, [n,1-n]], str(i)+'_'+str(100-i)))
+                augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,j}, [1,n]], '100_'+str(i)))
+                augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,j}, [n,1]], str(i)+'_100'))
+            augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,j}, [1,1]], '100_100'))
 
         loadedAugmentatorId = loadParam('current_augmentator_id', 0)
         for augmentator in augmentators[loadedAugmentatorId:]:
@@ -87,18 +95,18 @@ for fold in range(params.currentFold, params.kFold):
                 #salva resultado final
                 augmentator.saveGenerationExample()
                 params.continuing = False
-
                 #cria testes
                 benchmarks : List[Benchmark] = []
-                benchmarks.extend(getBenchmarks(Benchmarks.TSNE_INCEPTION, params))
                 benchmarks.extend(getBenchmarks(Benchmarks.CLASSIFIER, params))
+                if(loadedAugmentatorId <= augLen):
+                    benchmarks.extend(getBenchmarks(Benchmarks.TSNE_INCEPTION, params))
 
                 #percorre os testes
                 for benchmark in benchmarks:
                     if(benchmark != None):
+                        augmentator.verifyInitialization(dataset)
                         benchmark.train(augmentator, dataset)
                         benchmark.runTest(dataset)
-
         saveParam('current_augmentator_id', 0)
         dataset.unload()
     saveParam('current_dataset_id', 0)

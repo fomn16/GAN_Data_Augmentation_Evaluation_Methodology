@@ -6,7 +6,7 @@ from Modules.Shared.Saving import *
 from Modules.Datasets.Dataset import Dataset
 from Modules.Shared.Params import Params
 
-from Modules.Augmentation.GANFramework import GANFramework
+from Modules.Augmentation.GANFramework import *
 
 class GAN(GANFramework):
     def loadConstants(self):
@@ -49,7 +49,7 @@ class GAN(GANFramework):
         return model
 
     def __init__(self, params: Params, extraParams = None, nameComplement = ""):
-        self.name = self.__class__.__name__ + "_" +  nameComplement
+        self.name = self.__class__.__name__ + addToName("(" +  nameComplement + ")")
 
         self.currentFold = params.currentFold
         self.nClasses = params.nClasses
@@ -83,6 +83,7 @@ class GAN(GANFramework):
 
         self.generator = keras.Model(inputs = genInput, outputs = [genOutput, labelOutput], name = 'generator')
         
+        self.generator.summary()
         keras.utils.plot_model(
             self.generator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/generator.png')
         )
@@ -110,6 +111,7 @@ class GAN(GANFramework):
 
         self.discriminator = keras.Model(inputs = [discInput, labelInput], outputs = discOutput, name = 'discriminator')
 
+        self.discriminator.summary()
         keras.utils.plot_model(
             self.discriminator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/discriminator.png')
         )
@@ -129,7 +131,7 @@ class GAN(GANFramework):
             self.optDiscr = Adam(learning_rate = self.initLr/2, beta_1 = 0.5)
             self.optGan  = Adam(learning_rate=self.initLr, beta_1=0.5)
 
-        self.discriminator.compile(loss='binary_crossentropy', optimizer=self.optDiscr)
+        self.discriminator.compile(loss= 'binary_crossentropy', optimizer=self.optDiscr, metrics=[my_distance, my_accuracy])
 
         self.discriminator.trainable = False
         input = Input(shape=(self.noiseDim,))
@@ -138,6 +140,7 @@ class GAN(GANFramework):
 
         self.gan.compile(loss= 'binary_crossentropy', optimizer=self.optGan)
 
+        self.gan.summary()
         keras.utils.plot_model(
             self.gan, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/gan.png')
         )

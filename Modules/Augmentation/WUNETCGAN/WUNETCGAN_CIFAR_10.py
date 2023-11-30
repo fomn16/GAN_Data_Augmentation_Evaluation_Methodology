@@ -5,10 +5,6 @@ from Modules.Shared.helper import *
 from Modules.Augmentation.WUNETCGAN.WUNETCGAN import WUNETCGAN
 
 class WUNETCGAN_CIFAR_10(WUNETCGAN):
-    def __init__(self, params: Params, extraParams=None, nameComplement=""):
-        super().__init__(params, extraParams)
-        self.name = self.__class__.__name__+'_'+params.datasetName+'_'+params.datasetNameComplement+'_'+nameComplement
-
     def loadConstants(self):
         self.genWidth = 4
         self.genHeight = 4
@@ -33,9 +29,10 @@ class WUNETCGAN_CIFAR_10(WUNETCGAN):
         self.gan = None 
 
         self.uNetChannels = 32
-        self.uNetRatio = 1.5
+        self.uNetRatio = 1.75
         self.uNetBlocks = 3
         self.uNetDropout = False
+        self.uNetBatchNorm = True
     
     def genUpscale(self, model):
         model = self.TransposedBlock(model, 1, 32, dropout=False)
@@ -44,7 +41,7 @@ class WUNETCGAN_CIFAR_10(WUNETCGAN):
         return model
     
     def discDownscale(self, model):
-        model = self.InceptionBlock(model, 2, 32, stride=2, dropout=False)
-        model = self.InceptionBlock(model, 2, 64, stride=2, dropout=False)
-        model = self.InceptionBlock(model, 2, 128, stride=2, dropout=False)
+        model = self.InceptionBlock(model, 3, 32, stride=2, dropout=False)
+        model = self.InceptionBlock(model, 3, 64, stride=2, dropout=False)
+        model = self.InceptionBlock(model, 3, 128, stride=2, dropout=False)
         return model

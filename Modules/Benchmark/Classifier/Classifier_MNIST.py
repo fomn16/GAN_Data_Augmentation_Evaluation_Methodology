@@ -15,7 +15,7 @@ class Classifier_MNIST(Benchmark):
     batchSize = 128
 
     def __init__(self, params: Params, nameComplement = ""):
-        self.name = self.__class__.__name__ + "_" +  nameComplement
+        self.name = self.__class__.__name__ + addToName("(" +  nameComplement + ")")
 
         self.nClasses = params.nClasses
         self.basePath = verifiedFolder('runtime_' + params.runtime + '/trainingStats/' + self.name)
@@ -42,6 +42,7 @@ class Classifier_MNIST(Benchmark):
 
         self.classifier = keras.Model(inputs = classInput, outputs = classOutput, name = 'classifier')
 
+        self.classifier.summary()
         keras.utils.plot_model(
             self.classifier, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '.png')
         )

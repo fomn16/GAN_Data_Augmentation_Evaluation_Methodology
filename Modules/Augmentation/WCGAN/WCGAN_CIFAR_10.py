@@ -5,10 +5,6 @@ from Modules.Shared.helper import *
 from Modules.Augmentation.WCGAN.WCGAN import WCGAN
 
 class WCGAN_CIFAR_10(WCGAN):
-    def __init__(self, params: Params, extraParams=None, nameComplement=""):
-        super().__init__(params, extraParams)
-        self.name = self.__class__.__name__+'_'+params.datasetName+'_'+params.datasetNameComplement+'_'+nameComplement
-
     def loadConstants(self):
         self.genWidth = 4
         self.genHeight = 4

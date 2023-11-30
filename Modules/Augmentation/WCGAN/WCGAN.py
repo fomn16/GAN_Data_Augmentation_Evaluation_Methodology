@@ -49,7 +49,7 @@ class WCGAN(GANFramework):
         return model
 
     def __init__(self, params: Params, extraParams = None, nameComplement = ""):
-        self.name = self.__class__.__name__ + "_" +  nameComplement
+        self.name = self.__class__.__name__ + addToName("(" +  nameComplement + ")")
 
         self.currentFold = params.currentFold
         self.nClasses = params.nClasses
@@ -79,6 +79,7 @@ class WCGAN(GANFramework):
         
         self.generator = keras.Model(inputs = [cgenNoiseInput, labelInput], outputs = cgenOutput, name = 'cgenerator')
 
+        self.generator.summary()
         keras.utils.plot_model(
             self.generator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/generator.png')
         )
@@ -93,11 +94,12 @@ class WCGAN(GANFramework):
 
         discX = self.discDownscale(discX)
 
-        discX = Conv2D(1, self.genWidth, kernel_initializer='glorot_uniform', activation='linear')(discX)
+        discX = Conv2D(1, self.genWidth, kernel_initializer='glorot_uniform', activation='tanh')(discX)
         discOutput = Flatten(name = 'discoutput_realvsfake')(discX)
 
         self.discriminator = keras.Model(inputs = [discInput, labelInput], outputs = discOutput, name = 'discriminator')
 
+        self.discriminator.summary()
         keras.utils.plot_model(
             self.discriminator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/discriminator.png')
         )
@@ -111,11 +113,11 @@ class WCGAN(GANFramework):
         if(self.params.continuing):
             self.discriminator.load_weights(verifiedFolder(epochPath + '/disc_weights'))
             self.generator.load_weights(verifiedFolder(epochPath + '/gen_weights'))
-            self.optDiscr = RMSprop(learning_rate=loadParam(self.name + '_disc_opt_lr'))
-            self.optGan = RMSprop(learning_rate=loadParam(self.name + '_gan_opt_lr'))
-        else:
-            self.optDiscr = RMSprop(learning_rate=self.initLr)
-            self.optGan = RMSprop(learning_rate=self.initLr)
+
+        lr_schedule_disc = ExponentialDecay(self.initLr, staircase = False, decay_steps=100000, decay_rate=0.96)
+        lr_schedule_gan = ExponentialDecay(self.initLr, staircase = False, decay_steps=100000, decay_rate=0.96)
+        self.optDiscr = RMSprop(learning_rate=lr_schedule_disc)
+        self.optGan = RMSprop(learning_rate=lr_schedule_gan)
 
         self.discriminator.compile(loss=wasserstein_loss, optimizer=self.optDiscr, metrics=[my_distance, my_accuracy])
 
@@ -129,6 +131,7 @@ class WCGAN(GANFramework):
         
         self.discriminator.trainable = True
 
+        self.gan.summary()
         keras.utils.plot_model(
             self.gan, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/gan.png')
         )

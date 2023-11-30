@@ -167,12 +167,14 @@ def LoadDataset(name, with_info,as_supervised,data_dir,nameComplement,sliceNames
         retData = imgs, lbls
     return retData
 
-def unbalance(imgs, lbls, minClassInstances, nClasses):
+def unbalance(imgs, lbls, minClassPercent, nClasses):
     tempCounter = [0]*nClasses
     for i in range(len(lbls)):
         tempCounter[lbls[i]] += 1
-    maxClassInstances = np.max(tempCounter)
-    coeff = (maxClassInstances - minClassInstances)/(nClasses-1)
+    maxClassCount = np.max(tempCounter)
+    minClassCount = np.min(tempCounter)
+    minClassInstances = int(minClassCount*minClassPercent)
+    coeff = (maxClassCount - minClassInstances)/(nClasses-1)
     unbalancedImgs = []
     unbalancedLbls = []
     counter = [0]*nClasses
@@ -200,3 +202,8 @@ def resizeImg(imgSide, index, entry):
             ret = entry
             ret[index] = img
         return ret
+
+def addToName(s):
+    if(s is not None and s != ""):
+        return "_" + s
+    return ""

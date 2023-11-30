@@ -35,20 +35,21 @@ class WUNETCGAN(GANFramework):
         self.uNetRatio = 1.5
         self.uNetBlocks = 3
         self.uNetDropout = False
+        self.uNetBatchNorm = True
         
         raise ValueError("WUNETCGAN.loadConstants must be overriten") 
     
     def genUpscale(self, model):
-        model = self.TransposedBlock(model, 2, 32)
-        model = self.TransposedBlock(model, 2, 32)
-        model = self.TransposedBlock(model, 2, 6)
+        model = self.TransposedBlock(model, 2, 16, dropout=False)
+        model = self.TransposedBlock(model, 2, 32, dropout=False)
+        model = self.TransposedBlock(model, 2, 8, dropout=False)
         raise ValueError("WUNETCGAN.genUpscale must be overriten") 
         return model
     
     def discDownscale(self, model):
-        model = self.InceptionBlock(model, 2, 32, stride=2)
-        model = self.InceptionBlock(model, 2, 32, stride=2)
-        model = self.InceptionBlock(model, 2, 32, stride=2)
+        model = self.InceptionBlock(model, 3, 32, stride=2, dropout=False)
+        model = self.InceptionBlock(model, 3, 64, stride=2, dropout=False)
+        model = self.InceptionBlock(model, 3, 128, stride=2, dropout=False)
         raise ValueError("WUNETCGAN.discDownscale must be overriten") 
         return model
 
@@ -58,7 +59,7 @@ class WUNETCGAN(GANFramework):
         return ret
 
     def __init__(self, params: Params, extraParams = None, nameComplement = ""):
-        self.name = self.__class__.__name__ + "_" +  nameComplement
+        self.name = self.__class__.__name__ + addToName("(" +  nameComplement + ")")
 
         self.currentFold = params.currentFold
         self.nClasses = params.nClasses
@@ -87,11 +88,12 @@ class WUNETCGAN(GANFramework):
 
         X = layers.concatenate([X, imageInput])
 
-        X = self.UNet(X, self.uNetChannels, self.uNetRatio, self.uNetBlocks, dropout=self.uNetDropout)
+        X = self.UNet(X, self.uNetChannels, self.uNetRatio, self.uNetBlocks, dropout=self.uNetDropout, batchNorm=self.uNetBatchNorm)
 
         output = Conv2D(filters=self.imgChannels, kernel_size=1, padding='same', activation='tanh',  name = 'gen_output', kernel_initializer='glorot_uniform')(X)
         
         self.generator = keras.Model(inputs = [noise, label, imageInput], outputs = output, name = 'generator')
+        
         self.generator.summary()
         keras.utils.plot_model(
             self.generator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/generator.png')
@@ -109,6 +111,7 @@ class WUNETCGAN(GANFramework):
         discOutput = Flatten(name = 'discoutput_class')(X)
 
         self.discriminator = keras.Model(inputs = [img1, img2], outputs = discOutput, name = 'discriminator')
+        
         self.discriminator.summary()
         keras.utils.plot_model(
             self.discriminator, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/discriminator.png')
@@ -146,6 +149,7 @@ class WUNETCGAN(GANFramework):
                         )
         
         self.discriminator.trainable = True
+        
         self.gan.summary()
         keras.utils.plot_model(
             self.gan, show_shapes= True, show_dtype = True, to_file=verifiedFolder('runtime_' + self.params.runtime + '/modelArchitecture/' + self.name + '/gan.png')

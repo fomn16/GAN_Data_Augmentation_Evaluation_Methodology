@@ -8,7 +8,7 @@ class Dataset:
     def __init__(self, params:Params):
         self.params = params
         self.loadParams()
-        self.name = params.datasetName + "_" + self.params.datasetNameComplement
+        self.name = params.datasetName + addToName(self.params.datasetNameComplement)
     
     def loadParams(self):
         self.params.datasetName = Datasets.MNIST
@@ -25,10 +25,10 @@ class Dataset:
         self.slices = ['train', 'test']
     
     def getTrainData(self, start, end):
-        return self.trainImgs[start:end], self.trainLbls[start:end]
+        return self.trainImgs[start:end].copy(), self.trainLbls[start:end].copy()
 
     def getTestData(self, start, end):
-        return self.testImgs[start:end], self.testLbls[start:end]
+        return self.testImgs[start:end].copy(), self.testLbls[start:end].copy()
     
     def load(self):
         self.loadParams()

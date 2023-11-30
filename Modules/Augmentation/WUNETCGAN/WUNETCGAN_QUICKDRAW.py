@@ -5,10 +5,6 @@ from Modules.Shared.helper import *
 from Modules.Augmentation.WUNETCGAN.WUNETCGAN import WUNETCGAN
 
 class WUNETCGAN_QUICKDRAW(WUNETCGAN):
-    def __init__(self, params: Params, extraParams=None, nameComplement=""):
-        super().__init__(params, extraParams)
-        self.name = self.__class__.__name__+'_'+params.datasetName+'_'+params.datasetNameComplement+'_'+nameComplement
-
     def loadConstants(self):
         self.genWidth = 7
         self.genHeight = 7
@@ -36,6 +32,7 @@ class WUNETCGAN_QUICKDRAW(WUNETCGAN):
         self.uNetRatio = 2
         self.uNetBlocks = 2
         self.uNetDropout = False
+        self.uNetBatchNorm = True
     
     def genUpscale(self, model):
         model = self.TransposedBlock(model, 1, 16)

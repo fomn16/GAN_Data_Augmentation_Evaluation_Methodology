@@ -21,7 +21,7 @@ class TSNE_INCEPTION(Benchmark):
     inceptionBatchSize = 250
 
     def __init__(self, params: Params, nameComplement = ""):
-        self.name = self.__class__.__name__ + "_" +  nameComplement
+        self.name = self.__class__.__name__ + addToName("(" +  nameComplement + ")")
 
         self.nClasses = params.nClasses
         self.basePath = verifiedFolder('runtime_' + params.runtime + '/trainingStats/' + self.name + '/fold_' + str(params.currentFold))

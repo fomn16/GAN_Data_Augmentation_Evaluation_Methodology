@@ -17,7 +17,7 @@ class MIXED(Augmentator):
         else:
             self.percentages = [1] * len(ids)
 
-        self.name = '_'.join([arr[id].name for id in ids]) + '_' + self.__class__.__name__ + '_' + nameComplement
+        self.name = self.__class__.__name__ + addToName(nameComplement) + '/' + '_'.join([arr[id].name for id in ids])
 
         self.currentFold = params.currentFold
         self.basePath = verifiedFolder('runtime_' + params.runtime + '/trainingStats/' + self.name)

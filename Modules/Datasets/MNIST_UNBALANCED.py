@@ -13,6 +13,6 @@ class MNIST_UNBALANCED(Dataset):
         self.params.imgHeight = 28 
 
         self.transformFunction = None
-        self.filterFunction = lambda img, data: unbalance(img, data, 700, self.params.nClasses)
+        self.filterFunction = lambda img, data: unbalance(img, data, 0.1, self.params.nClasses)
         
         self.slices = ['train', 'test']

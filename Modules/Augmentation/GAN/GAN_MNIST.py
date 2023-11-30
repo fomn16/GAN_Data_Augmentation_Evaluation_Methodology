@@ -5,10 +5,6 @@ from Modules.Shared.helper import *
 from Modules.Augmentation.GAN.GAN import GAN
 
 class GAN_MNIST(GAN):
-    def __init__(self, params: Params, extraParams=None, nameComplement=""):
-        super().__init__(params, extraParams)
-        self.name = self.__class__.__name__+'_'+params.datasetName+'_'+params.datasetNameComplement+'_'+nameComplement
-        
     def loadConstants(self):
         self.genWidth = 7
         self.genHeight = 7

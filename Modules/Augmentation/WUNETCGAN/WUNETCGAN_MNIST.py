@@ -5,10 +5,6 @@ from Modules.Shared.helper import *
 from Modules.Augmentation.WUNETCGAN.WUNETCGAN import WUNETCGAN
 
 class WUNETCGAN_MNIST(WUNETCGAN):
-    def __init__(self, params: Params, extraParams=None, nameComplement=""):
-        super().__init__(params, extraParams)
-        self.name = self.__class__.__name__+'_'+params.datasetName+'_'+params.datasetNameComplement+'_'+nameComplement
-
     def loadConstants(self):
         self.genWidth = 7
         self.genHeight = 7
@@ -17,7 +13,7 @@ class WUNETCGAN_MNIST(WUNETCGAN):
         self.noiseDepth = int(np.ceil(approximateNoiseDim/(self.genWidth*self.genHeight)))
         self.noiseDim = self.genWidth*self.genHeight*self.noiseDepth
 
-        self.initLr = 2e-5
+        self.initLr = 8e-5
         self.leakyReluAlpha = 0.2
         self.dropoutParam = 0.02
         self.batchNormMomentum = 0.8
@@ -25,7 +21,7 @@ class WUNETCGAN_MNIST(WUNETCGAN):
 
         self.clipValue = 0.01
 
-        self.ganEpochs = 50
+        self.ganEpochs = 100
         self.batchSize = 128
         self.extraDiscEpochs = 5
         self.generator = None
@@ -36,6 +32,7 @@ class WUNETCGAN_MNIST(WUNETCGAN):
         self.uNetRatio = 1.25
         self.uNetBlocks = 1
         self.uNetDropout = False
+        self.uNetBatchNorm = True
     
     def genUpscale(self, model):
         model = self.TransposedBlock(model, 1, 8)
@@ -43,7 +40,7 @@ class WUNETCGAN_MNIST(WUNETCGAN):
         return model
     
     def discDownscale(self, model):
-        model = self.ResidualBlock(model, 1, 16, stride=2)
-        model = self.ResidualBlock(model, 1, 32, stride=2)
-        model = self.ResidualBlock(model, 1, 64)
+        model = self.ResidualBlock(model, 2, 32, stride=2)
+        model = self.ResidualBlock(model, 2, 64, stride=2)
+        model = self.ResidualBlock(model, 2, 128)
         return model

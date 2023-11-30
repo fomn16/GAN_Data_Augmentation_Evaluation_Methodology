@@ -13,6 +13,6 @@ class CIFAR_10_UNBALANCED(Dataset):
         self.params.imgHeight = 32
 
         self.transformFunction = None
-        self.filterFunction = lambda img, data: unbalance(img, data, 600, self.params.nClasses)
+        self.filterFunction = lambda img, data: unbalance(img, data, 0.1, self.params.nClasses)
 
         self.slices = ['train', 'test']

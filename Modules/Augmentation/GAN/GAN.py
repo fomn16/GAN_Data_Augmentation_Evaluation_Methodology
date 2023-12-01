@@ -146,7 +146,7 @@ class GAN(GANFramework):
         )
 
         if(not self.params.continuing):
-            self.saveModel()
+            self.saveModel(saveLR=True)
 
     def train(self, dataset:Dataset):
         print('started ' + self.name + ' training')
@@ -178,7 +178,7 @@ class GAN(GANFramework):
         for epoch in range(startEpoch+1, self.ganEpochs):
             if(loadParam('close') == True):
                 saveParam('close', False)
-                self.saveModel(epoch-1, genLossHist, discLossHist)
+                self.saveModel(epoch-1, genLossHist, discLossHist, saveLR=True)
                 sys.exit()
             for i in range(nBatches):
                 imgBatch, labelBatch = dataset.getTrainData(i*self.batchSize, (i+1)*self.batchSize)
@@ -212,7 +212,7 @@ class GAN(GANFramework):
                     plotLoss([[genLossHist, 'generator loss'],[discLossHist, 'discriminator loss']], self.basePath + '/trainPlot.png')
                     
             if((self.params.saveModels and epoch%5 == 0) or epoch == self.ganEpochs-1):
-                self.saveModel(epoch, genLossHist, discLossHist)
+                self.saveModel(epoch, genLossHist, discLossHist, saveLR=True)
 
     def saveGenerationExample(self, nEntries=20):
         noise = np.random.uniform(-1,1, size=(nEntries,self.noiseDim))

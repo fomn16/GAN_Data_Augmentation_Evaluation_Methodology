@@ -195,7 +195,7 @@ class GANFramework(Augmentator):
         model = self.ResidualBlock(model, nBlocks, channels, kernelSize=ksize, batchNorm=batchNorm, dropout=dropout)
         return model
     
-    def saveModel(self, epoch = 0, genLossHist = [], discLossHist = []):
+    def saveModel(self, epoch = 0, genLossHist = [], discLossHist = [], saveLR = False):
         saveParam(self.name + '_current_epoch', epoch)
         saveParam(self.name + '_gen_loss_hist', genLossHist)
         saveParam(self.name + '_disc_loss_hist', discLossHist)
@@ -204,5 +204,6 @@ class GANFramework(Augmentator):
         self.discriminator.save_weights(verifiedFolder(epochPath + '/disc_weights'))
         self.generator.save_weights(verifiedFolder(epochPath + '/gen_weights'))
 
-        saveParam(self.name + '_disc_opt_lr', np.float64(self.optDiscr.learning_rate.numpy()))
-        saveParam(self.name + '_gan_opt_lr', np.float64(self.optGan.learning_rate.numpy()))
+        if(saveLR):
+            saveParam(self.name + '_disc_opt_lr', np.float64(self.optDiscr.learning_rate.numpy()))
+            saveParam(self.name + '_gan_opt_lr', np.float64(self.optGan.learning_rate.numpy()))

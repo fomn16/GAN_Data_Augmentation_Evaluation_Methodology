@@ -144,7 +144,7 @@ class WUNETCGAN(GANFramework):
         cganOutput =  self.discriminator([self.generator([cganNoiseInput, cganLabelInput, cganImgInput]), cganImgInput])
         self.gan = Model((cganNoiseInput, cganLabelInput, cganImgInput), cganOutput)
 
-        self.gan.compile(loss='categorical_focal_crossentropy', 
+        self.gan.compile(loss=wasserstein_loss, 
                          optimizer=self.optGan
                         )
         

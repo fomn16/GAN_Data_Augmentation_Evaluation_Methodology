@@ -184,11 +184,11 @@ class GANFramework(Augmentator):
         model = self.ResidualBlock(model, nBlocks, channels, kernelSize=ksize, batchNorm=batchNorm, dropout=dropout)
 
         if(spatialResolution%2==0 and spatialResolution>=self.genWidth):
-            down = layers.MaxPooling2D(2)(model)
+            down = self.ResidualBlock(model, nBlocks, channels, kernelSize=ksize, batchNorm=batchNorm, dropout=dropout, stride=2)
 
             ret = self.UNet(down, downChannels, channelRatio, batchNorm=batchNorm, dropout=dropout, kSizes=downKsizes)
             
-            up = self.TransposedBlock(ret, 0, channels, ksize, batchNorm=batchNorm, dropout=dropout)
+            up = self.TransposedBlock(ret, 1, channels, ksize, batchNorm=batchNorm, dropout=dropout)
 
             model = layers.concatenate([model, up])
 

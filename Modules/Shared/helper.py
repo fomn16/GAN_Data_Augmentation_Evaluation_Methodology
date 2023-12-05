@@ -89,6 +89,13 @@ def load_pickle(file_path):
         data = pickle.load(f)
     return data
 
+def sliceForEntry(id, nEntryArray):
+    for i in range(len(nEntryArray)):
+        id -= nEntryArray[i]
+        if(id <= 0):
+            return i
+    return len(nEntryArray) -1
+
 def LoadDataset(name, with_info,as_supervised,data_dir,nameComplement,sliceNames, transformationFunction = None, filterFunction = None):
     outputDir = f'{data_dir}/{name}_{nameComplement}_tfrecords'
     
@@ -97,12 +104,17 @@ def LoadDataset(name, with_info,as_supervised,data_dir,nameComplement,sliceNames
         with_info=with_info, 
         as_supervised=as_supervised, 
         data_dir=data_dir)
-    train = dataset[sliceNames[0]]
-    test = dataset[sliceNames[1]] if sliceNames[1] in dataset else None
+    
+    nEntries = 0
+    nEntryArray = []
+    loadedSlices = []
+    
+    for slice in sliceNames:
+        if(slice in dataset):
+            loadedSlices.append(dataset[slice])
+            nEntryArray.append(info.splits[slice].num_examples)
+            nEntries += info.splits[slice].num_examples
 
-    nEntriesTrain = info.splits[sliceNames[0]].num_examples
-    nEntriesTest = info.splits[sliceNames[1]].num_examples if test != None else 0
-    nEntries = nEntriesTrain+nEntriesTest
     maxStorageGigs = 5
     maxStorage = 133415085*maxStorageGigs
 
@@ -110,39 +122,31 @@ def LoadDataset(name, with_info,as_supervised,data_dir,nameComplement,sliceNames
 
     #se o dataset ainda não foi criado
     if not os.path.exists(outputDir):
-        alteredTrain = None
-        alteredTest = None
-        if(transformationFunction != None):
-            alteredTrain = map(transformationFunction, train.as_numpy_iterator())
-            alteredTest = map(transformationFunction, test.as_numpy_iterator()) if test != None else None
-        else:
-            alteredTrain = train.as_numpy_iterator()
-            alteredTest  = test.as_numpy_iterator() if test != None else None
-    
-        entries = None
-    
+        alteredSlices = []
+        for slice in loadedSlices:
+            if(transformationFunction != None):
+                alteredSlices.append(map(transformationFunction, slice.as_numpy_iterator()))
+            else:
+                alteredSlices.append(slice.as_numpy_iterator())
+
         nPixels = 1
-        alteredTrain, tst = itertools.tee(alteredTrain)
+        alteredSlices[0], tst = itertools.tee(alteredSlices[0])
         shape = next(tst)[0].shape
         for n in shape:
             nPixels *= n
-
         maxStorageImgs = int(np.floor(maxStorage/nPixels))
 
-        if(nEntries < maxStorageImgs):
-            entries = list(alteredTrain)
-            if test != None:
-                test  = list(alteredTest)
-                entries.extend(test)
-        else:
-            if(nEntriesTrain < maxStorageImgs):
-                testIncluded = maxStorageImgs - nEntriesTrain
-                entries = list(alteredTrain)
-                if test != None:
-                    test  = list(itertools.islice(alteredTest, testIncluded))
-                    entries.extend(test)
+        includedEntries = 0
+        entries = []
+        while(includedEntries < maxStorageImgs):
+            targetSlice = sliceForEntry(includedEntries, nEntryArray)
+            if(includedEntries + nEntryArray[targetSlice] <= maxStorageImgs):
+                includedEntries += nEntryArray[targetSlice]
+                entries.extend(list(alteredSlices[targetSlice]))
             else:
-                entries = list(itertools.islice(alteredTrain, maxStorageImgs))
+                includedEntries = maxStorageImgs
+                toInclude = maxStorageImgs - includedEntries
+                entries.extend(list(itertools.islice(alteredSlices[targetSlice], toInclude)))
 
         imgs = np.array([i[0] for i in entries])
         lbls = np.array([i[1] for i in entries])

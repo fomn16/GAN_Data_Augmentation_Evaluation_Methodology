@@ -68,20 +68,21 @@ for fold in range(params.currentFold, params.kFold):
         dataset.load()
 
         augmentators : List[Augmentator] = []
-        augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
-        augmentators.extend(getAugmentators(Augmentators.GAN, params))
-        augmentators.extend(getAugmentators(Augmentators.CGAN, params))
+        #augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
+        #augmentators.extend(getAugmentators(Augmentators.GAN, params))
+        #augmentators.extend(getAugmentators(Augmentators.CGAN, params))
+        #augmentators.extend(getAugmentators(Augmentators.WCGAN, params))
         augmentators.extend(getAugmentators(Augmentators.WUNETCGAN, params))
-        augmentators.extend(getAugmentators(Augmentators.WCGAN, params))
 
         augLen = len(augmentators)
+        '''
         for j in range(1, augLen):
             for i in range (10,100,10):
                 n=i/100
                 augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,j}, [n,1-n]], str(i)+'_'+str(100-i)))
                 augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,j}, [1,n]], '100_'+str(i)))
                 augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,j}, [n,1]], str(i)+'_100'))
-            augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,j}, [1,1]], '100_100'))
+            augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,j}, [1,1]], '100_100'))'''
 
         loadedAugmentatorId = loadParam('current_augmentator_id', 0)
         for augmentator in augmentators[loadedAugmentatorId:]:

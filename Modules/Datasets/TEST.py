@@ -7,12 +7,12 @@ class TEST(Dataset):
         self.params.datasetName = Datasets.TEST
         self.params.datasetNameComplement = 'default'
         
-        self.params.nClasses = 345
-        self.params.imgChannels = 1
-        self.params.imgWidth = 28
-        self.params.imgHeight = 28
+        self.params.nClasses = 38
+        self.params.imgChannels = 3
+        self.params.imgWidth = 32
+        self.params.imgHeight = 32
 
-        self.transformFunction = None
+        self.transformFunction = lambda entry: resizeImg(32, 0, entry)
         self.filterFunction = None
 
-        self.slices = ['train', 'test']
+        self.slices = ['train']

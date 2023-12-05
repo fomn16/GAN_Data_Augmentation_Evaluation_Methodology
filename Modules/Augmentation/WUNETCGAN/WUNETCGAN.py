@@ -130,12 +130,17 @@ class WUNETCGAN(GANFramework):
         lr_schedule_disc = ExponentialDecay(self.initLr, staircase = False, decay_steps=100000, decay_rate=0.96)
         lr_schedule_gan = ExponentialDecay(self.initLr, staircase = False, decay_steps=100000, decay_rate=0.96)
         self.optDiscr = Adam(learning_rate=lr_schedule_disc, beta_1 = 0.5, beta_2=0.9)
-        self.optGan = Adam(learning_rate=lr_schedule_gan, beta_1 = 0.5, beta_2=0.9)
+        self.optGan =   Adam(learning_rate=lr_schedule_gan, beta_1 = 0.5, beta_2=0.9)
+        self.optGen =   Adam(learning_rate=lr_schedule_gan, beta_1 = 0.5, beta_2=0.9)
 
         self.discriminator.compile( loss=wasserstein_loss, 
                                     optimizer=self.optDiscr, 
                                     metrics=[my_distance, my_accuracy]
                                    )
+        
+        self.generator.compile(loss=wasserstein_loss, 
+                         optimizer=self.optGen
+        )
 
         self.discriminator.trainable = False
         cganNoiseInput = Input(shape=(self.noiseDim,))
@@ -159,6 +164,7 @@ class WUNETCGAN(GANFramework):
             self.saveModel()
 
     def train(self, dataset: Dataset):
+        self.ld = {}
         print('started ' + self.name + ' training')
         self.testImgs, self.testLbls = dataset.getTestData(0, 20)
 
@@ -196,28 +202,28 @@ class WUNETCGAN(GANFramework):
                 for j in range(self.extraDiscEpochs):
                     imgBatch, labelBatch = dataset.getTrainData((i+j)*self.batchSize, (i+j+1)*self.batchSize)
                     (imgBatch, labelBatch) = shuffle(imgBatch, labelBatch)
-                    section = int(self.batchSize/3)
+                    section = int(self.batchSize/2)#3)
                     
-                    imgBatch = [imgBatch[0:section], imgBatch[section:2*section], imgBatch[2*section:]]
-                    labelBatch = [labelBatch[0:section], labelBatch[section:2*section], labelBatch[2*section:]]
+                    imgBatch = [imgBatch[0:section], imgBatch[section:]]#2*section], imgBatch[2*section:]]
+                    labelBatch = [labelBatch[0:section], labelBatch[section:]]#2*section], labelBatch[2*section:]]
 
                     imgsShuffled = shuffle_same_class(imgBatch[0], labelBatch[0], self.nClasses)
 
-                    genInput = np.random.uniform(-1,1,size=(section,self.noiseDim))
+                    genInput = np.random.uniform(-1,1,size=(len(labelBatch[1]),self.noiseDim))
                     imgsFake = self.generator.predict([genInput, labelBatch[1], imgBatch[1]], verbose=0)
 
-                    imgsWrongClass, _ = shuffle_different_class(imgBatch[2], labelBatch[2], self.nClasses)
+                    #imgsWrongClass, _ = shuffle_different_class(imgBatch[2], labelBatch[2], self.nClasses)
                     
-                    XImg    = np.concatenate((imgsShuffled, imgsFake,       imgsWrongClass))
-                    XImg2   = np.concatenate((imgBatch[0],  imgBatch[1],    imgBatch[2]))
+                    XImg    = np.concatenate((imgsShuffled, imgsFake))#,       imgBatch[2]))
+                    XImg2   = np.concatenate((imgBatch[0],  imgBatch[1]))#,    imgsWrongClass))
 
                     classes = [
                         [[1 if i == c else 0 for c in range(2*self.nClasses)] for i in labelBatch[0]],
                         [[1 if i+self.nClasses == c else 0 for c in range(2*self.nClasses)] for i in labelBatch[1]],
-                        [[1 if i+self.nClasses == c else 0 for c in range(2*self.nClasses)] for i in labelBatch[2]],
-                        ]
+                        #[[1 if i+self.nClasses == c else 0 for c in range(2*self.nClasses)] for i in labelBatch[2]],
+                    ]
                 
-                    y = np.array((classes[0]) + (classes[1]) + (classes[2]))
+                    y = np.array((classes[0]) + (classes[1]))# + (classes[2]))
 
                     (XImg, XImg2, y) = shuffle(XImg, XImg2, y)
                     discLoss = self.discriminator.train_on_batch([XImg, XImg2], y)
@@ -237,7 +243,7 @@ class WUNETCGAN(GANFramework):
                     discLossHist.append(discLoss)
                     genLossHist.append(ganLoss)
 
-                    print("Epoch " + str(epoch) + "\nCGAN (generator training) loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss))
+                    print("Epoch " + str(epoch) + "\ngenerator adversarial loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss))
                     infoFile = open(self.basePath + '/info.txt', 'a')
                     infoFile.write("Epoch " + str(epoch) + "\nCGAN (generator training) loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss)+ '\n')
                     infoFile.close()
@@ -252,6 +258,54 @@ class WUNETCGAN(GANFramework):
                     showOutputAsImg(newOut, self.basePath + '/output_f' + str(self.currentFold) + '_e' + str(epoch) + '_' + '_'.join([str(a) for a in labelBatch[:10]]) + '.png', colored=(self.imgChannels>1))
                     plotLoss([[genLossHist, 'generator loss'],[discLossHist, 'discriminator loss']], self.basePath + '/trainPlot.png')
 
+            def get_size(obj, seen=None):
+                size = sys.getsizeof(obj)
+                if seen is None:
+                    seen = set()
+                obj_id = id(obj)
+                if obj_id in seen:
+                    return 0  # Avoid double counting
+                seen.add(obj_id)
+                
+                if isinstance(obj, (list, tuple, set, frozenset)):
+                    size += sum(get_size(item, seen) for item in obj)
+                elif isinstance(obj, dict):
+                    size += sum(get_size(k, seen) + get_size(v, seen) for k, v in obj.items())
+                elif hasattr(obj, '__dict__'):
+                    size += get_size(obj.__dict__, seen)
+                elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
+                    try:
+                        size += sum(get_size(i, seen) for i in obj)
+                    except:
+                        pass
+
+                # Handling NumPy arrays
+                elif isinstance(obj, np.ndarray):
+                    if obj.ndim > 0:
+                        size += sum(get_size(item, seen) for item in obj)
+                return size
+
+            def printDictSpace(d, n):
+                dm = map(get_size, d.values())
+                dr = dict(zip(d.keys(), dm))
+                ds = dict(sorted(dr.items(), key=lambda item: item[1]))
+                dd = {}
+                if(n in self.ld):
+                    for name, value in self.ld[n].items():
+                        if(name in ds):
+                            dd[name] = ds[name] - value
+                        else:
+                            dd[name] = 0
+                else:
+                    dd = ds
+                    
+                self.ld[n] = ds
+                for name, value in dd.items():
+                    print(name + "\t\t" + str(value))
+
+            printDictSpace(vars(self), "self")
+            printDictSpace(locals(), "locals")
+                    
             if(self.params.saveModels):
                 self.saveModel(epoch, genLossHist, discLossHist)
                 

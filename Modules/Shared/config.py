@@ -6,6 +6,7 @@ from Modules.Shared.helper import *
 from Modules.Benchmark.Classifier.Classifier_MNIST import Classifier_MNIST
 from Modules.Benchmark.Classifier.Classifier_CIFAR import Classifier_CIFAR
 from Modules.Benchmark.TSNE_INCEPTION import TSNE_INCEPTION
+from Modules.Benchmark.Classifier.DiscriminatorAsClassifier import DiscriminatorAsClassifier
 
 from Modules.Augmentation.GAN.GAN_MNIST import GAN_MNIST
 from Modules.Augmentation.CGAN.CGAN_MNIST import CGAN_MNIST
@@ -43,6 +44,7 @@ class Augmentators:
 class Benchmarks:
     CLASSIFIER = "classifier"
     TSNE_INCEPTION = "tsne_inception"
+    DISC_AS_CLASSIFIER = "disc_as_classifier"
 
 def getAugmentators(augmentator, params:Params, extraParams = None, nameComplement = "") -> List[Augmentator]:
     name = params.datasetNameComplement + addToName(nameComplement)
@@ -87,4 +89,6 @@ def getBenchmarks(benchmark, params: Params, nameComplement = "") -> List[Benchm
             return [Classifier_CIFAR(params, name)]
     elif(benchmark == Benchmarks.TSNE_INCEPTION):
             return [TSNE_INCEPTION(params, name)]
+    elif(benchmark == Benchmarks.DISC_AS_CLASSIFIER):
+            return [DiscriminatorAsClassifier(params, name)]
     return [None]

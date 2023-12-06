@@ -13,9 +13,9 @@ class WCGAN_CIFAR_10(WCGAN):
         self.noiseDepth = int(np.ceil(approximateNoiseDim/(self.genWidth*self.genHeight)))
         self.noiseDim = self.genWidth*self.genHeight*self.noiseDepth
 
-        self.initLr = 2.5e-5
+        self.initLr = 2e-5
         self.leakyReluAlpha = 0.2
-        self.dropoutParam = 0.05
+        self.dropoutParam = 0.02
         self.batchNormMomentum = 0.8
         self.batchNormEpsilon = 2e-4
 
@@ -29,13 +29,13 @@ class WCGAN_CIFAR_10(WCGAN):
         self.gan = None
 
     def genUpscale(self, model):
-        model = self.TransposedBlock(model, 3, 64, 4)
-        model = self.TransposedBlock(model, 3, 128, 4)
-        model = self.TransposedBlock(model, 3, 256, 3)
+        model = self.TransposedBlock(model, 3, 32, dropout=False, kernelSize=5)
+        model = self.TransposedBlock(model, 2, 64, dropout=False)
+        model = self.TransposedBlock(model, 2, 128, dropout=False)
         return model
     
     def discDownscale(self, model):
-        model = self.Block(model, 2, 64, 3)
-        model = self.Block(model, 2, 128, 3)
-        model = self.Block(model, 2, 256, 3)
+        model = self.Block(model, 2, 64, dropout=False)
+        model = self.Block(model, 2, 128, dropout=False)
+        model = self.Block(model, 2, 256, dropout=False)
         return model

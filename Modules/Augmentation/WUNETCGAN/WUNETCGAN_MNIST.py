@@ -33,6 +33,8 @@ class WUNETCGAN_MNIST(WUNETCGAN):
         self.uNetBlocks = 2
         self.uNetDropout = False
         self.uNetBatchNorm = True
+
+        self.wrongClassAmmt = 0.5
     
     def genUpscale(self, model):
         model = self.TransposedBlock(model, 1, 32)
@@ -40,7 +42,7 @@ class WUNETCGAN_MNIST(WUNETCGAN):
         return model
     
     def discDownscale(self, model):
-        model = self.ResidualBlock(model, 2, 64, stride=2)
+        model = self.ResidualBlock(model, 2, 64, stride=2, kernelSize=5)
         model = self.ResidualBlock(model, 2, 64, stride=2)
         model = self.ResidualBlock(model, 2, 128)
         return model

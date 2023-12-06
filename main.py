@@ -67,23 +67,24 @@ for fold in range(params.currentFold, params.kFold):
         loadedDatasetId+=1
         dataset.load()
 
-        augmentators : List[Augmentator] = []
-        #augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
-        #augmentators.extend(getAugmentators(Augmentators.GAN, params))
-        #augmentators.extend(getAugmentators(Augmentators.CGAN, params))
-        #augmentators.extend(getAugmentators(Augmentators.WCGAN, params))
-        augmentators.extend(getAugmentators(Augmentators.WUNETCGAN, params))
 
-        augLen = len(augmentators)
-        '''
-        for j in range(1, augLen):
+        def addWithMixTests(augList, name, params):
+            augList.extend(getAugmentators(name, params))
+            id = len(augList) - 1
             for i in range (10,100,10):
                 n=i/100
-                augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,j}, [n,1-n]], str(i)+'_'+str(100-i)))
-                augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,j}, [1,n]], '100_'+str(i)))
-                augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,j}, [n,1]], str(i)+'_100'))
-            augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,j}, [1,1]], '100_100'))'''
+                augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [n,1-n]], str(i)+'_'+str(100-i)))
+                augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [1,n]], '100_'+str(i)))
+                augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [n,1]], str(i)+'_100'))
+                augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [1,1]], '100_100'))
 
+        augmentators : List[Augmentator] = []
+        #augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
+        #addWithMixTests(augmentators, Augmentators.GAN, params)
+        #addWithMixTests(augmentators, Augmentators.CGAN, params)
+        addWithMixTests(augmentators, Augmentators.WCGAN, params)
+        addWithMixTests(augmentators, Augmentators.WUNETCGAN, params)
+        
         loadedAugmentatorId = loadParam('current_augmentator_id', 0)
         for augmentator in augmentators[loadedAugmentatorId:]:
             saveParam('current_augmentator_id', loadedAugmentatorId)
@@ -98,8 +99,9 @@ for fold in range(params.currentFold, params.kFold):
                 params.continuing = False
                 #cria testes
                 benchmarks : List[Benchmark] = []
+                benchmarks.extend(getBenchmarks(Benchmarks.DISC_AS_CLASSIFIER, params))
                 benchmarks.extend(getBenchmarks(Benchmarks.CLASSIFIER, params))
-                if(loadedAugmentatorId <= augLen):
+                if("MIXED" not in augmentator.name):
                     benchmarks.extend(getBenchmarks(Benchmarks.TSNE_INCEPTION, params))
 
                 #percorre os testes

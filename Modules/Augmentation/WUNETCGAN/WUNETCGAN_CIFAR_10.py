@@ -33,6 +33,8 @@ class WUNETCGAN_CIFAR_10(WUNETCGAN):
         self.uNetBlocks = 3
         self.uNetDropout = False
         self.uNetBatchNorm = True
+
+        self.wrongClassAmmt = 0.25
     
     def genUpscale(self, model):
         model = self.TransposedBlock(model, 1, 32, dropout=False)

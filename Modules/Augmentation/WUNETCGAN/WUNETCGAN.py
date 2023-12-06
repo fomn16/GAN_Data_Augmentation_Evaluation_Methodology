@@ -36,6 +36,8 @@ class WUNETCGAN(GANFramework):
         self.uNetBlocks = 3
         self.uNetDropout = False
         self.uNetBatchNorm = True
+
+        self.wrongClassAmmt = 0.25
         
         raise ValueError("WUNETCGAN.loadConstants must be overriten") 
     
@@ -144,18 +146,25 @@ class WUNETCGAN(GANFramework):
             decay_rate=0.96
         
         )
+        '''lr_schedule_gen = ExponentialDecay(
+            self.initLr/2, 
+            staircase = False,
+            decay_steps=self.ganEpochs*nBatches/10,
+            decay_rate=0.93
+        
+        )'''
         self.optDiscr = Adam(learning_rate=lr_schedule_disc, beta_1 = 0.5, beta_2=0.9)
         self.optGan =   Adam(learning_rate=lr_schedule_gan, beta_1 = 0.5, beta_2=0.9)
-        self.optGen =   Adam(learning_rate=lr_schedule_gan, beta_1 = 0.5, beta_2=0.9)
+        ''' self.optGen =   Adam(learning_rate=lr_schedule_gen, beta_1 = 0.5, beta_2=0.9)'''
 
         self.discriminator.compile( loss=wasserstein_loss, 
                                     optimizer=self.optDiscr, 
-                                    metrics=[my_distance, my_accuracy],
-                                    loss_weights=[1, self.nClasses]
+                                    metrics=[my_accuracy],
+                                    #loss_weights=[1, self.nClasses]
                                    )
-        self.generator.compile(loss=wasserstein_loss, 
+        '''self.generator.compile(loss=tf.losses.mean_squared_error, 
                          optimizer=self.optGen
-        )
+        )'''
 
         self.discriminator.trainable = False
         cganNoiseInput = Input(shape=(self.noiseDim,))
@@ -166,7 +175,7 @@ class WUNETCGAN(GANFramework):
 
         self.gan.compile(   loss=wasserstein_loss,
                             optimizer=self.optGan,
-                            loss_weights=[1, self.nClasses]
+                            #loss_weights=[1, self.nClasses]
                         )
         
         self.discriminator.trainable = True
@@ -218,10 +227,13 @@ class WUNETCGAN(GANFramework):
                 for j in range(self.extraDiscEpochs):
                     imgBatch, labelBatch = dataset.getTrainData((i+j)*self.batchSize, (i+j+1)*self.batchSize)
                     (imgBatch, labelBatch) = shuffle(imgBatch, labelBatch)
-                    section = int(self.batchSize/3)
                     
-                    imgBatch = [imgBatch[0:section], imgBatch[section:2*section], imgBatch[2*section:]]
-                    labelBatch = [labelBatch[0:section], labelBatch[section:2*section], labelBatch[2*section:]]
+                    nReal = int(self.batchSize/2)
+                    nWrong = int((self.batchSize - nReal)*self.wrongClassAmmt)
+                    nFake = self.batchSize - nWrong
+                    
+                    imgBatch = [imgBatch[:nReal], imgBatch[nReal:nFake], imgBatch[nFake:]]
+                    labelBatch = [labelBatch[:nReal], labelBatch[nReal:nFake], labelBatch[nFake:]]
 
                     imgsShuffled = shuffle_same_class(imgBatch[0], labelBatch[0], self.nClasses)
 
@@ -262,13 +274,10 @@ class WUNETCGAN(GANFramework):
                 y2 = np.array([-1 for i in labelBatch])
 
                 ganLoss = self.gan.train_on_batch([genTrainNoise, labelBatch, imgBatch], [y1, y2])
-                #genLoss = self.generator.train_on_batch([genTrainNoise, labelBatch, imgBatch],imgBatch)
 
                 if i == nBatches-1:
                     discLossHist.append(discLoss)
                     genLossHist.append(ganLoss)
-
-                    print(discLossHist)
 
                     print("Epoch " + str(epoch) + "\ngenerator adversarial loss: " + str(ganLoss) + "\ndiscriminator loss: " + str(discLoss))
                     infoFile = open(self.basePath + '/info.txt', 'a')
@@ -284,54 +293,6 @@ class WUNETCGAN(GANFramework):
                         newOut[outId*2+1] = out[outId]
                     showOutputAsImg(newOut, self.basePath + '/output_f' + str(self.currentFold) + '_e' + str(epoch) + '_' + '_'.join([str(a) for a in labelBatch[:10]]) + '.png', colored=(self.imgChannels>1))
                     plotLoss([[genLossHist, 'generator loss'],[discLossHist, 'discriminator loss']], self.basePath + '/trainPlot.png')
-
-            '''def get_size(obj, seen=None):
-                size = sys.getsizeof(obj)
-                if seen is None:
-                    seen = set()
-                obj_id = id(obj)
-                if obj_id in seen:
-                    return 0  
-                seen.add(obj_id)
-                
-                if isinstance(obj, (list, tuple, set, frozenset)):
-                    size += sum(get_size(item, seen) for item in obj)
-                elif isinstance(obj, dict):
-                    size += sum(get_size(k, seen) + get_size(v, seen) for k, v in obj.items())
-                elif hasattr(obj, '__dict__'):
-                    size += get_size(obj.__dict__, seen)
-                elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
-                    try:
-                        size += sum(get_size(i, seen) for i in obj)
-                    except:
-                        pass
-
-                # Handling NumPy arrays
-                elif isinstance(obj, np.ndarray):
-                    if obj.ndim > 0:
-                        size += sum(get_size(item, seen) for item in obj)
-                return size
-
-            def printDictSpace(d, n):
-                dm = map(get_size, d.values())
-                dr = dict(zip(d.keys(), dm))
-                ds = dict(sorted(dr.items(), key=lambda item: item[1]))
-                dd = {}
-                if(n in self.ld):
-                    for name, value in self.ld[n].items():
-                        if(name in ds):
-                            dd[name] = ds[name] - value
-                        else:
-                            dd[name] = 0
-                else:
-                    dd = ds
-                    
-                self.ld[n] = ds
-                for name, value in dd.items():
-                    print(name + "\t\t" + str(value))
-
-            printDictSpace(vars(self), "self")
-            printDictSpace(locals(), "locals")'''
                     
             if(self.params.saveModels):
                 self.saveModel(epoch, genLossHist, discLossHist)

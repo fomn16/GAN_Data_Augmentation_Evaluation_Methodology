@@ -9,11 +9,7 @@ from Modules.Shared.Params import Params
 
 def wasserstein_loss(y_true, y_pred):
     y_true = tf.cast(y_true, y_pred.dtype)
-    return -K.mean(y_true * y_pred)
-
-def my_distance(y_true, y_pred):
-    y_true = tf.cast(y_true, y_pred.dtype)
-    return tf.reduce_mean(tf.abs(y_true - y_pred))
+    return tf.math.reduce_mean(y_true*y_pred)
 
 def my_accuracy(y_true, y_pred):
     y_true = tf.cast(y_true, y_pred.dtype)

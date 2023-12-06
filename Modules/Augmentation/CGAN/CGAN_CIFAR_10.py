@@ -28,13 +28,13 @@ class CGAN_CIFAR_10(CGAN):
         self.gan = None
 
     def genUpscale(self, model):
-        model = self.TransposedBlock(model, 1, 64, 3)
-        model = self.TransposedBlock(model, 1, 64, 3)
-        model = self.TransposedBlock(model, 1, 64, 3)
+        model = self.TransposedBlock(model, 2, 64)
+        model = self.TransposedBlock(model, 2, 64)
+        model = self.TransposedBlock(model, 1, 64)
         return model
     
     def discDownscale(self, model):
-        model = self.Block(model, 1, 64, 3)
-        model = self.Block(model, 1, 64, 3)
-        model = self.Block(model, 1, 64, 3)
+        model = self.Block(model, 1, 64)
+        model = self.Block(model, 1, 64)
+        model = self.Block(model, 1, 64)
         return model

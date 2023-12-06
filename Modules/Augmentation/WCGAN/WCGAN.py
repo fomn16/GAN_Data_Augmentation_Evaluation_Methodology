@@ -94,7 +94,7 @@ class WCGAN(GANFramework):
 
         discX = self.discDownscale(discX)
 
-        discX = Conv2D(1, self.genWidth, kernel_initializer='glorot_uniform', activation='tanh')(discX)
+        discX = Conv2D(1, self.genWidth, kernel_initializer='glorot_uniform', activation='linear')(discX)
         discOutput = Flatten(name = 'discoutput_realvsfake')(discX)
 
         self.discriminator = keras.Model(inputs = [discInput, labelInput], outputs = discOutput, name = 'discriminator')
@@ -129,9 +129,11 @@ class WCGAN(GANFramework):
         )
         
         self.optDiscr = RMSprop(learning_rate=lr_schedule_disc)
+        self.optGen = RMSprop(learning_rate=lr_schedule_gan)
         self.optGan = RMSprop(learning_rate=lr_schedule_gan)
 
-        self.discriminator.compile(loss=wasserstein_loss, optimizer=self.optDiscr, metrics=[my_distance, my_accuracy])
+        self.discriminator.compile(loss=wasserstein_loss, optimizer=self.optDiscr, metrics=[my_accuracy])
+        self.generator.compile(loss=wasserstein_loss, optimizer=self.optGan)
 
         self.discriminator.trainable = False
         cganNoiseInput = Input(shape=(self.noiseDim,))
@@ -189,7 +191,6 @@ class WCGAN(GANFramework):
                     
                     genInput = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
                     labelInput = np.random.randint(0,self.nClasses, size = (self.batchSize))
-                    
                     genImgOutput = self.generator.predict([genInput, labelInput], verbose=0)
 
                     XImg = np.concatenate((imgBatch, genImgOutput))

@@ -38,5 +38,4 @@ class GAN_CIFAR_10(GAN):
         model = self.Block(model, 1, 64, kernelRegularizer=regularizers.l2(self.l2RegParam))
         model = self.Block(model, 1, 128, kernelRegularizer=regularizers.l2(self.l2RegParam))
         model = self.Block(model, 1, 256, kernelRegularizer=regularizers.l2(self.l2RegParam))
-        model = self.Block(model, 1, 256, kernelRegularizer=regularizers.l2(self.l2RegParam))
         return model

@@ -13,7 +13,7 @@ class WCGAN_MNIST(WCGAN):
         self.noiseDepth = int(np.ceil(approximateNoiseDim/(self.genWidth*self.genHeight)))
         self.noiseDim = self.genWidth*self.genHeight*self.noiseDepth
 
-        self.initLr = 8e-5
+        self.initLr = 4e-4
         self.leakyReluAlpha = 0.2
         self.dropoutParam = 0.05
         self.batchNormMomentum = 0.8
@@ -29,11 +29,11 @@ class WCGAN_MNIST(WCGAN):
         self.gan = None
 
     def genUpscale(self, model):
-        model = self.TransposedBlock(model, 2, 64, dropout=False)
-        model = self.TransposedBlock(model, 2, 64, dropout=False)
+        model = self.TransposedBlock(model, 1, 64, dropout=False, kernelSize=5)
+        model = self.TransposedBlock(model, 1, 64, dropout=False)
         return model
     
     def discDownscale(self, model):
-        model = self.Block(model, 3, 64, dropout=False, kernelSize=5, batchNorm=False)
-        model = self.Block(model, 2, 64, dropout=False, batchNorm=False)
+        model = self.Block(model, 2, 64, dropout=False, kernelSize=5)
+        model = self.Block(model, 2, 128, dropout=False)
         return model

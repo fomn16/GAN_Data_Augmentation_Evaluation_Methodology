@@ -131,7 +131,7 @@ class GAN(GANFramework):
             self.optDiscr = Adam(learning_rate = self.initLr/2, beta_1 = 0.5)
             self.optGan  = Adam(learning_rate=self.initLr, beta_1=0.5)
 
-        self.discriminator.compile(loss= 'binary_crossentropy', optimizer=self.optDiscr, metrics=[my_distance, my_accuracy])
+        self.discriminator.compile(loss= 'binary_crossentropy', optimizer=self.optDiscr, metrics=[my_accuracy])
 
         self.discriminator.trainable = False
         input = Input(shape=(self.noiseDim,))

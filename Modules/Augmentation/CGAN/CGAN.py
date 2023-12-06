@@ -141,7 +141,7 @@ class CGAN(GANFramework):
         self.optDiscr = Adam(learning_rate = lr_schedule_disc, beta_1=0.5, beta_2=0.9)
         self.optGan  = Adam(learning_rate = lr_schedule_gan, beta_1=0.5, beta_2=0.9)
 
-        self.discriminator.compile(loss='binary_crossentropy', optimizer=self.optDiscr, metrics=[my_distance, my_accuracy])
+        self.discriminator.compile(loss='binary_crossentropy', optimizer=self.optDiscr, metrics=[my_accuracy])
 
         self.discriminator.trainable = False
         cganNoiseInput = Input(shape=(self.noiseDim,))

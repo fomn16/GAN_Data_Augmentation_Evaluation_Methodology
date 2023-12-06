@@ -207,7 +207,7 @@ def resizeImg(imgSide, index, entry):
             ret[index] = img
         return ret
 
-def addToName(s):
+def addToName(s, pre = "_"):
     if(s is not None and s != ""):
-        return "_" + s
+        return pre + s
     return ""

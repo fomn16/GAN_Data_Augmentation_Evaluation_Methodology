@@ -12,6 +12,7 @@ class Params:
     dataDir = None
     datasetName = None
     datasetNameComplement = None
+    datasetTrainInstances = None
     runtime = None
     saveModels = None
     continuing = None

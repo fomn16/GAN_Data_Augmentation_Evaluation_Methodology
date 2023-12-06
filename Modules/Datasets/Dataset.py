@@ -58,6 +58,7 @@ class Dataset:
         self.testLbls = lbls[testStart:testEnd]
         self.trainImgs = np.concatenate((imgs[:testStart],imgs[testEnd:]))
         self.trainLbls = np.concatenate((lbls[:testStart],lbls[testEnd:]))
+        self.params.datasetTrainInstances = self.trainInstances
 
     def unload(self):
         del self.testImgs, self.testLbls, self.trainImgs, self.trainLbls

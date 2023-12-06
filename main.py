@@ -27,7 +27,7 @@ if(loadParam('active') is None):
     #local no qual os datasets serão salvos
     params.dataDir = './tfDatasets'
     #validação cruzada
-    params.kFold = 5
+    params.kFold = 4
     params.currentFold = 0
     params.runtime = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
     params.saveModels = True
@@ -50,7 +50,7 @@ else:
 datasets : List[Dataset] = []
 
 #datasets.append(TEST(params))
-datasets.append(MNIST(params))
+#datasets.append(MNIST(params))
 datasets.append(MNIST_UNBALANCED(params))
 #datasets.append(CIFAR_10(params))
 #datasets.append(CIFAR_10_UNBALANCED(params))

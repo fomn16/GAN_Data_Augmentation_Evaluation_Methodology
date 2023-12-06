@@ -114,8 +114,20 @@ class WCGAN(GANFramework):
             self.discriminator.load_weights(verifiedFolder(epochPath + '/disc_weights'))
             self.generator.load_weights(verifiedFolder(epochPath + '/gen_weights'))
 
-        lr_schedule_disc = ExponentialDecay(self.initLr, staircase = False, decay_steps=100000, decay_rate=0.96)
-        lr_schedule_gan = ExponentialDecay(self.initLr, staircase = False, decay_steps=100000, decay_rate=0.96)
+        nBatches = int(self.params.datasetTrainInstances/self.batchSize) - self.extraDiscEpochs
+        lr_schedule_disc = ExponentialDecay(
+            self.initLr, 
+            staircase = False, 
+            decay_steps=self.ganEpochs*self.extraDiscEpochs*nBatches, 
+            decay_rate=0.96
+        )
+        lr_schedule_gan = ExponentialDecay(
+            self.initLr, 
+            staircase = False, 
+            decay_steps=self.ganEpochs*nBatches, 
+            decay_rate=0.96
+        )
+        
         self.optDiscr = RMSprop(learning_rate=lr_schedule_disc)
         self.optGan = RMSprop(learning_rate=lr_schedule_gan)
 

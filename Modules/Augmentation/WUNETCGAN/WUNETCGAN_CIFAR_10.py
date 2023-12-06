@@ -13,7 +13,7 @@ class WUNETCGAN_CIFAR_10(WUNETCGAN):
         self.noiseDepth = int(np.ceil(approximateNoiseDim/(self.genWidth*self.genHeight)))
         self.noiseDim = self.genWidth*self.genHeight*self.noiseDepth
 
-        self.initLr = 8e-6
+        self.initLr = 8e-4
         self.leakyReluAlpha = 0.2
         self.dropoutParam = 0.02
         self.batchNormMomentum = 0.8

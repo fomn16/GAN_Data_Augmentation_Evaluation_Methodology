@@ -1,14 +1,14 @@
 from Modules.Shared.helper import *
 from Modules.Shared.config import *
 
-from Modules.Datasets.MNIST import MNIST
-from Modules.Datasets.MNIST_UNBALANCED import MNIST_UNBALANCED
-from Modules.Datasets.CIFAR_10 import CIFAR_10
-from Modules.Datasets.CIFAR_10_UNBALANCED import CIFAR_10_UNBALANCED
-from Modules.Datasets.TEST import TEST
-from Modules.Datasets.QUICKDRAW import QUICKDRAW
-from Modules.Datasets.FLOWERS import FLOWERS
-from Modules.Datasets.IMAGENET import IMAGENET
+from Modules.Datasets.Implementations.MNIST import MNIST
+from Modules.Datasets.Implementations.MNIST_UNBALANCED import MNIST_UNBALANCED
+from Modules.Datasets.Implementations.CIFAR_10 import CIFAR_10
+from Modules.Datasets.Implementations.CIFAR_10_UNBALANCED import CIFAR_10_UNBALANCED
+from Modules.Datasets.Implementations.TEST import TEST
+from Modules.Datasets.Implementations.QUICKDRAW import QUICKDRAW
+from Modules.Datasets.Implementations.FLOWERS import FLOWERS
+from Modules.Datasets.Implementations.IMAGENET import IMAGENET
 
 from Modules.Shared.Saving import *
 
@@ -51,8 +51,8 @@ datasets : List[Dataset] = []
 
 #datasets.append(TEST(params))
 #datasets.append(MNIST(params))
-datasets.append(MNIST_UNBALANCED(params))
-#datasets.append(CIFAR_10(params))
+#datasets.append(MNIST_UNBALANCED(params))
+datasets.append(CIFAR_10(params))
 #datasets.append(CIFAR_10_UNBALANCED(params))
 #datasets.append(QUICKDRAW(params))
 #datasets.append(FLOWERS(params))

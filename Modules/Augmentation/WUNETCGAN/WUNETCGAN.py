@@ -285,7 +285,7 @@ class WUNETCGAN(GANFramework):
                     showOutputAsImg(newOut, self.basePath + '/output_f' + str(self.currentFold) + '_e' + str(epoch) + '_' + '_'.join([str(a) for a in labelBatch[:10]]) + '.png', colored=(self.imgChannels>1))
                     plotLoss([[genLossHist, 'generator loss'],[discLossHist, 'discriminator loss']], self.basePath + '/trainPlot.png')
 
-            def get_size(obj, seen=None):
+            '''def get_size(obj, seen=None):
                 size = sys.getsizeof(obj)
                 if seen is None:
                     seen = set()
@@ -331,7 +331,7 @@ class WUNETCGAN(GANFramework):
                     print(name + "\t\t" + str(value))
 
             printDictSpace(vars(self), "self")
-            printDictSpace(locals(), "locals")
+            printDictSpace(locals(), "locals")'''
                     
             if(self.params.saveModels):
                 self.saveModel(epoch, genLossHist, discLossHist)

@@ -27,10 +27,10 @@ from Modules.Benchmark.Benchmark import Benchmark
 class Datasets:
     MNIST = "mnist"
     CIFAR_10 = "cifar10"
-    IMAGENET = "imagenet_resized/32x32"
-    FLOWERS = "tf_flowers"
     QUICKDRAW = "quickdraw_bitmap"
-    TEST = "quickdraw_bitmap"
+    FLOWERS = "tf_flowers"
+    IMAGENET = "imagenet_resized/32x32"
+    TEST = "plant_village"
 
 class Augmentators:
     GAN = "gan"
@@ -70,6 +70,8 @@ def getAugmentators(augmentator, params:Params, extraParams = None, nameCompleme
             return [WUNETCGAN_CIFAR_10(params, extraParams, name)]
         if(params.datasetName == Datasets.QUICKDRAW):
             return [WUNETCGAN_QUICKDRAW(params, extraParams, name)]
+        if(params.datasetName == Datasets.TEST):
+            return [WUNETCGAN_CIFAR_10(params, extraParams, name)]
     if(augmentator == Augmentators.DIRECT):
         return [DATASET_DIRECTLY(params, extraParams, name)]
     if(augmentator == Augmentators.MIXED):

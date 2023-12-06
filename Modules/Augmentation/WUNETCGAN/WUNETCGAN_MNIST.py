@@ -13,7 +13,7 @@ class WUNETCGAN_MNIST(WUNETCGAN):
         self.noiseDepth = int(np.ceil(approximateNoiseDim/(self.genWidth*self.genHeight)))
         self.noiseDim = self.genWidth*self.genHeight*self.noiseDepth
 
-        self.initLr = 8e-5
+        self.initLr = 8e-4
         self.leakyReluAlpha = 0.2
         self.dropoutParam = 0.02
         self.batchNormMomentum = 0.8
@@ -26,21 +26,21 @@ class WUNETCGAN_MNIST(WUNETCGAN):
         self.extraDiscEpochs = 5
         self.generator = None
         self.discriminator = None
-        self.gan = None 
+        self.gan = None
 
         self.uNetChannels = 32
         self.uNetRatio = 1.25
-        self.uNetBlocks = 1
+        self.uNetBlocks = 2
         self.uNetDropout = False
         self.uNetBatchNorm = True
     
     def genUpscale(self, model):
-        model = self.TransposedBlock(model, 1, 8)
-        model = self.TransposedBlock(model, 1, 4)
+        model = self.TransposedBlock(model, 1, 32)
+        model = self.TransposedBlock(model, 1, 1)
         return model
     
     def discDownscale(self, model):
-        model = self.ResidualBlock(model, 2, 32, stride=2)
+        model = self.ResidualBlock(model, 2, 64, stride=2)
         model = self.ResidualBlock(model, 2, 64, stride=2)
         model = self.ResidualBlock(model, 2, 128)
         return model

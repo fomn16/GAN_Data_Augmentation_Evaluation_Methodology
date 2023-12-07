@@ -25,7 +25,7 @@ class DiscriminatorAsClassifier(Benchmark):
         self.augmentator = None
 
     def train(self, augmentator: Augmentator, dataset: Dataset):
-        if("WUNETCGAN" in augmentator.name):
+        if("WUNETCGAN" in augmentator.name and "MIXED" not in augmentator.name):
             self.augmentator = augmentator
 
     def runTest(self, dataset: Dataset):

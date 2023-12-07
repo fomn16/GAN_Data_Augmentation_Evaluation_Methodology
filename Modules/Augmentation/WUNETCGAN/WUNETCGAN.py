@@ -106,7 +106,7 @@ class WUNETCGAN(GANFramework):
 
         X = self.discDownscale(X)
 
-        X1 = Conv2D(self.nClasses, self.genWidth, kernel_initializer='glorot_uniform', activation='tanh')(X)
+        X1 = Conv2D(self.nClasses, self.genWidth, kernel_initializer='glorot_uniform', activation='softmax')(X)
         discOutput1 = Flatten(name = 'discoutput_class')(X1)
 
         X2 = Conv2D(1, self.genWidth, kernel_initializer='glorot_uniform', activation='tanh')(X)
@@ -143,25 +143,25 @@ class WUNETCGAN(GANFramework):
             decay_rate=0.96
         
         )
-        '''lr_schedule_gen = ExponentialDecay(
+        lr_schedule_gen = ExponentialDecay(
             self.initLr/2, 
             staircase = False,
             decay_steps=self.ganEpochs*nBatches/10,
             decay_rate=0.93
         
-        )'''
+        )
         self.optDiscr = Adam(learning_rate=lr_schedule_disc, beta_1 = 0.5, beta_2=0.9)
         self.optGan =   Adam(learning_rate=lr_schedule_gan, beta_1 = 0.5, beta_2=0.9)
-        ''' self.optGen =   Adam(learning_rate=lr_schedule_gen, beta_1 = 0.5, beta_2=0.9)'''
+        self.optGen =   Adam(learning_rate=lr_schedule_gen, beta_1 = 0.5, beta_2=0.9)
 
-        self.discriminator.compile( loss=wasserstein_loss, 
+        self.discriminator.compile( loss=['categorical_crossentropy',wasserstein_loss], 
                                     optimizer=self.optDiscr, 
                                     metrics=[my_accuracy],
                                     #loss_weights=[1, self.nClasses]
                                    )
-        '''self.generator.compile(loss=tf.losses.mean_squared_error, 
+        self.generator.compile(loss=tf.losses.mean_squared_error, 
                          optimizer=self.optGen
-        )'''
+        )
 
         self.discriminator.trainable = False
         cganNoiseInput = Input(shape=(self.noiseDim,))
@@ -170,7 +170,7 @@ class WUNETCGAN(GANFramework):
         cganOutput =  self.discriminator([self.generator([cganNoiseInput, cganLabelInput, cganImgInput]), cganImgInput])
         self.gan = Model((cganNoiseInput, cganLabelInput, cganImgInput), cganOutput)
 
-        self.gan.compile(   loss=wasserstein_loss,
+        self.gan.compile(   loss=['categorical_crossentropy',wasserstein_loss],
                             optimizer=self.optGan,
                             #loss_weights=[1, self.nClasses]
                         )
@@ -243,9 +243,9 @@ class WUNETCGAN(GANFramework):
                     XImg2   = np.concatenate((imgBatch[0],  imgBatch[1],    imgsWrongClass))
 
                     classes = [
-                        [[1 if i == c else -1 for c in range(self.nClasses)] for i in labelBatch[0]],
-                        [[1 if i == c else -1 for c in range(self.nClasses)] for i in labelBatch[1]],
-                        [[1 if i == c else -1 for c in range(self.nClasses)] for i in labelBatch[2]]
+                        [[1 if i == c else 0 for c in range(self.nClasses)] for i in labelBatch[0]],
+                        [[1 if i == c else 0 for c in range(self.nClasses)] for i in labelBatch[1]],
+                        [[1 if i == c else 0 for c in range(self.nClasses)] for i in labelBatch[2]]
                     ]
                     y1 = np.array((classes[0]) + (classes[1]) + (classes[2]))
 
@@ -267,9 +267,10 @@ class WUNETCGAN(GANFramework):
                 imgBatch, labelBatch = dataset.getTrainData((i)*self.batchSize, (i+1)*self.batchSize)
                 genTrainNoise = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
 
-                y1 = np.array([[1 if i == c else -1 for c in range(self.nClasses)] for i in labelBatch])
+                y1 = np.array([[1 if i == c else 0 for c in range(self.nClasses)] for i in labelBatch])
                 y2 = np.array([-1 for i in labelBatch])
 
+                genLoss = self.generator.train_on_batch([genTrainNoise, labelBatch, imgBatch], imgBatch)
                 ganLoss = self.gan.train_on_batch([genTrainNoise, labelBatch, imgBatch], [y1, y2])
 
                 if i == nBatches-1:

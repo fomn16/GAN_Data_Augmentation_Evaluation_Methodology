@@ -188,7 +188,7 @@ class GANFramework(Augmentator):
 
             model = layers.concatenate([model, up])
 
-        model = self.ResidualBlock(model, nBlocks, channels, kernelSize=ksize, batchNorm=batchNorm, dropout=dropout)
+        model = self.ResidualBlock(model, nBlocks, channels, kernelSize=3, batchNorm=batchNorm, dropout=dropout)
         return model
     
     def saveModel(self, epoch = 0, genLossHist = [], discLossHist = [], saveLR = False):

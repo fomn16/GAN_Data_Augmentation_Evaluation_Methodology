@@ -33,14 +33,25 @@ class DiscriminatorAsClassifier(Benchmark):
             imgs, lbls = dataset.getTestData(0, dataset.testInstances)
             classOutput, _ = self.augmentator.discriminator.predict([imgs, imgs], verbose=0)
             lbls = np.array([[1 if i == lbl else 0 for i in range(self.nClasses)] for lbl in lbls], dtype='float32')
-            
+
+            stats = ""
+            for i in range(20):
+                stats += "["
+                for j in classOutput[i]:
+                    stats += str(j) + ", "
+                
+                stats += "] -> " + str(_[i]) + "\n"
+
             aurocScore = ""
             try:
                 aurocScore = str(roc_auc_score(lbls, classOutput))
             except:
                 aurocScore = "error calculating:\n" + str(lbls) + "\n" + str(classOutput)
             
-            report = classification_report(lbls, classOutput) + '\nauroc score: ' + aurocScore + '\n'
+            lbls = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in lbls]
+            classOutput = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in classOutput]
+
+            report = classification_report(lbls, classOutput) + '\nauroc score: ' + aurocScore  + "\ndisc output: " + stats+ '\n'
 
             print(report)
             infoFile = open(self.basePath + '/info.txt', 'a')

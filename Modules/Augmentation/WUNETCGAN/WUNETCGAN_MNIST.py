@@ -27,14 +27,11 @@ class WUNETCGAN_MNIST(WUNETCGAN):
         self.generator = None
         self.discriminator = None
         self.gan = None
-
-        self.uNetChannels = 32
-        self.uNetRatio = 1.25
-        self.uNetBlocks = 2
-        self.uNetDropout = False
-        self.uNetBatchNorm = True
-
+        
         self.wrongClassAmmt = 0.5
+
+    def UNetCall(self, model):
+        return self.UNet(model, 32, 1.25, 2, dropout=False)
     
     def genUpscale(self, model):
         model = self.TransposedBlock(model, 1, 32)

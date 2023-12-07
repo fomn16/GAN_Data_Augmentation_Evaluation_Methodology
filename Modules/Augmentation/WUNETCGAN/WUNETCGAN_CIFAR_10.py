@@ -28,13 +28,10 @@ class WUNETCGAN_CIFAR_10(WUNETCGAN):
         self.discriminator = None
         self.gan = None 
 
-        self.uNetChannels = 32
-        self.uNetRatio = 1.75
-        self.uNetBlocks = 3
-        self.uNetDropout = False
-        self.uNetBatchNorm = True
+        self.wrongClassAmmt = 0.5
 
-        self.wrongClassAmmt = 0.25
+    def UNetCall(self, model):
+        return self.UNet(model, 32, 1.5, 3, dropout=False)
     
     def genUpscale(self, model):
         model = self.TransposedBlock(model, 1, 32, dropout=False)
@@ -43,7 +40,7 @@ class WUNETCGAN_CIFAR_10(WUNETCGAN):
         return model
     
     def discDownscale(self, model):
-        model = self.InceptionBlock(model, 3, 32, stride=2, dropout=False)
+        model = self.InceptionBlock(model, 3, 64, stride=2, dropout=False)
         model = self.InceptionBlock(model, 3, 64, stride=2, dropout=False)
         model = self.InceptionBlock(model, 3, 128, stride=2, dropout=False)
         return model

@@ -90,14 +90,15 @@ class Classifier_MNIST(Benchmark):
         imgs, lbls = dataset.getTestData(0, dataset.testInstances)
         lbls = np.array([[1 if i == lbl else 0 for i in range(self.nClasses)] for lbl in lbls], dtype='float32')
         classOutput = self.classifier.predict(imgs, verbose=0)
-        classOutput = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in classOutput]
-        lbls = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in lbls]
         
         aurocScore = ""
         try:
             aurocScore = str(roc_auc_score(lbls, classOutput))
         except:
             aurocScore = "error calculating:\n" + str(lbls) + "\n" + str(classOutput)
+
+        classOutput = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in classOutput]
+        lbls = [[int(np.argmax(o) == i) for i in range(self.nClasses)] for o in lbls]
         
         report = classification_report(lbls, classOutput) + '\nauroc score: ' + aurocScore + '\n'
 

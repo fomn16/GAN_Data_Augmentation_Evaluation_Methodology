@@ -31,12 +31,6 @@ class WUNETCGAN(GANFramework):
         self.discriminator = None
         self.gan = None
 
-        self.uNetChannels = 32
-        self.uNetRatio = 1.5
-        self.uNetBlocks = 3
-        self.uNetDropout = False
-        self.uNetBatchNorm = True
-
         self.wrongClassAmmt = 0.25
         
         raise ValueError("WUNETCGAN.loadConstants must be overriten") 
@@ -59,6 +53,9 @@ class WUNETCGAN(GANFramework):
         ret = layers.Embedding(self.nClasses, self.genWidth*self.genHeight)(model)
         ret = layers.Reshape((self.genWidth, self.genHeight, 1))(ret)
         return ret
+    
+    def UNetCall(self, model):
+        return self.UNet(model, 32, 1.5, 3, dropout=False, batchNorm=True)
 
     def __init__(self, params: Params, extraParams = None, nameComplement = ""):
         self.name = self.__class__.__name__ + addToName("(" +  nameComplement + ")")
@@ -90,7 +87,7 @@ class WUNETCGAN(GANFramework):
 
         X = layers.concatenate([X, imageInput])
 
-        X = self.UNet(X, self.uNetChannels, self.uNetRatio, self.uNetBlocks, dropout=self.uNetDropout, batchNorm=self.uNetBatchNorm)
+        X = self.UNetCall(X)
 
         output = Conv2D(filters=self.imgChannels, kernel_size=1, padding='same', activation='tanh',  name = 'gen_output', kernel_initializer='glorot_uniform')(X)
         
@@ -246,9 +243,9 @@ class WUNETCGAN(GANFramework):
                     XImg2   = np.concatenate((imgBatch[0],  imgBatch[1],    imgsWrongClass))
 
                     classes = [
-                        [[-1 if i == c else 1 for c in range(self.nClasses)] for i in labelBatch[0]],
-                        [[-1 if i == c else 1 for c in range(self.nClasses)] for i in labelBatch[1]],
-                        [[-1 if i == c else 1 for c in range(self.nClasses)] for i in labelBatch[2]]
+                        [[1 if i == c else -1 for c in range(self.nClasses)] for i in labelBatch[0]],
+                        [[1 if i == c else -1 for c in range(self.nClasses)] for i in labelBatch[1]],
+                        [[1 if i == c else -1 for c in range(self.nClasses)] for i in labelBatch[2]]
                     ]
                     y1 = np.array((classes[0]) + (classes[1]) + (classes[2]))
 
@@ -270,7 +267,7 @@ class WUNETCGAN(GANFramework):
                 imgBatch, labelBatch = dataset.getTrainData((i)*self.batchSize, (i+1)*self.batchSize)
                 genTrainNoise = np.random.uniform(-1,1,size=(self.batchSize,self.noiseDim))
 
-                y1 = np.array([[-1 if i == c else 1 for c in range(self.nClasses)] for i in labelBatch])
+                y1 = np.array([[1 if i == c else -1 for c in range(self.nClasses)] for i in labelBatch])
                 y2 = np.array([-1 for i in labelBatch])
 
                 ganLoss = self.gan.train_on_batch([genTrainNoise, labelBatch, imgBatch], [y1, y2])

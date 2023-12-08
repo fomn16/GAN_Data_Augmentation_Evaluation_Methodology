@@ -11,7 +11,7 @@ class Classifier_CIFAR(Benchmark):
     leakyReluAlpha = 0.2
     FCOutputDim = 512
     initLr = 2e-4
-    nEpochs = 10
+    nEpochs = 20
     batchSize = 128
 
     def __init__(self, params: Params, nameComplement = ""):

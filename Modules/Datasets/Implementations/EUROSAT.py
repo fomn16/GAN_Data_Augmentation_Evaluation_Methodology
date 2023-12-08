@@ -2,7 +2,7 @@ from Modules.Datasets.Dataset import Dataset
 from Modules.Shared.helper import *
 from Modules.Shared.config import *
 
-class TEST(Dataset):
+class EUROSAT(Dataset):
     def loadParams(self):
         self.params.datasetName = Datasets.TEST
         self.params.datasetNameComplement = 'default'

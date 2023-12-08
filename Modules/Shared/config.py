@@ -20,6 +20,11 @@ from Modules.Augmentation.WUNETCGAN.WUNETCGAN_CIFAR_10 import WUNETCGAN_CIFAR_10
 
 from Modules.Augmentation.WUNETCGAN.WUNETCGAN_PLANT import WUNETCGAN_PLANT
 
+from Modules.Augmentation.GAN.GAN_EUROSAT import GAN_EUROSAT
+from Modules.Augmentation.CGAN.CGAN_EUROSAT import CGAN_EUROSAT
+from Modules.Augmentation.WCGAN.WCGAN_EUROSAT import WCGAN_EUROSAT
+from Modules.Augmentation.WUNETCGAN.WUNETCGAN_EUROSAT import WUNETCGAN_EUROSAT
+
 from Modules.Augmentation.WUNETCGAN.WUNETCGAN_QUICKDRAW import WUNETCGAN_QUICKDRAW
 
 from Modules.Augmentation.DATASET_DIRECTLY import DATASET_DIRECTLY
@@ -32,10 +37,11 @@ class Datasets:
     MNIST = "mnist"
     CIFAR_10 = "cifar10"
     PLANT = "plant_village"
+    EUROSAT = "eurosat"
     QUICKDRAW = "quickdraw_bitmap"
     FLOWERS = "tf_flowers"
     IMAGENET = "imagenet_resized/32x32"
-    TEST = "plant_village"
+    TEST = "eurosat"
 
 class Augmentators:
     GAN = "gan"
@@ -59,6 +65,8 @@ def getAugmentators(augmentator, params:Params, extraParams = None, nameCompleme
             return [GAN_CIFAR_10(params, extraParams, name)]
         if(params.datasetName == Datasets.PLANT):
             return [GAN_CIFAR_10(params, extraParams, "PLANT_"+name)]
+        if(params.datasetName == Datasets.EUROSAT):
+            return [GAN_EUROSAT(params, extraParams, name)]
     if(augmentator == Augmentators.CGAN):
         if(params.datasetName == Datasets.MNIST):
             return [CGAN_MNIST(params, extraParams, name)]
@@ -66,6 +74,8 @@ def getAugmentators(augmentator, params:Params, extraParams = None, nameCompleme
             return [CGAN_CIFAR_10(params, extraParams, name)]
         if(params.datasetName == Datasets.PLANT):
             return [CGAN_CIFAR_10(params, extraParams, "PLANT_"+name)]
+        if(params.datasetName == Datasets.EUROSAT):
+            return [CGAN_EUROSAT(params, extraParams, name)]
     if(augmentator == Augmentators.WCGAN):
         if(params.datasetName == Datasets.MNIST):
             return [WCGAN_MNIST(params, extraParams, name)]
@@ -73,6 +83,8 @@ def getAugmentators(augmentator, params:Params, extraParams = None, nameCompleme
             return [WCGAN_CIFAR_10(params, extraParams, name)]
         if(params.datasetName == Datasets.PLANT):
             return [WCGAN_CIFAR_10(params, extraParams, "PLANT_"+name)]
+        if(params.datasetName == Datasets.EUROSAT):
+            return [WCGAN_EUROSAT(params, extraParams, name)]
     if(augmentator == Augmentators.WUNETCGAN):
         if(params.datasetName == Datasets.MNIST):
             return [WUNETCGAN_MNIST(params, extraParams, name)]
@@ -80,6 +92,11 @@ def getAugmentators(augmentator, params:Params, extraParams = None, nameCompleme
             return [WUNETCGAN_CIFAR_10(params, extraParams, name)]
         if(params.datasetName == Datasets.PLANT):
             return [WUNETCGAN_PLANT(params, extraParams, name)]
+        if(params.datasetName == Datasets.EUROSAT):
+            return [WUNETCGAN_EUROSAT(params, extraParams, name)]
+        
+        if(params.datasetName == Datasets.IMAGENET):
+            return [WUNETCGAN_CIFAR_10(params, extraParams, "IMAGENET_"+name)]
         if(params.datasetName == Datasets.QUICKDRAW):
             return [WUNETCGAN_QUICKDRAW(params, extraParams, name)]
         if(params.datasetName == Datasets.TEST):
@@ -99,6 +116,8 @@ def getBenchmarks(benchmark, params: Params, nameComplement = "") -> List[Benchm
             return [Classifier_CIFAR(params, name)]
         if(params.datasetName == Datasets.PLANT):
             return [Classifier_CIFAR(params,  "PLANT_"+name)]
+        if(params.datasetName == Datasets.EUROSAT):
+            return [Classifier_CIFAR(params,  "EUROSAT_"+name)]
     elif(benchmark == Benchmarks.TSNE_INCEPTION):
             return [TSNE_INCEPTION(params, name)]
     elif(benchmark == Benchmarks.DISC_AS_CLASSIFIER):

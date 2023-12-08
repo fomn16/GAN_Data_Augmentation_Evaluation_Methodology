@@ -5,7 +5,7 @@ from Modules.Shared.config import *
 class PLANT_UNBALANCED(Dataset):
     def loadParams(self):
         self.params.datasetName = Datasets.PLANT
-        self.params.datasetNameComplement = 'default'
+        self.params.datasetNameComplement = 'unbalanced'
         
         self.params.nClasses = 38
         self.params.imgChannels = 3

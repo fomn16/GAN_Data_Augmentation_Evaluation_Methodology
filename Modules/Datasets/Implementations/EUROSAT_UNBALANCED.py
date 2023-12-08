@@ -2,10 +2,10 @@ from Modules.Datasets.Dataset import Dataset
 from Modules.Shared.helper import *
 from Modules.Shared.config import *
 
-class TEST(Dataset):
+class EUROSAT_UNBALANCED(Dataset):
     def loadParams(self):
         self.params.datasetName = Datasets.TEST
-        self.params.datasetNameComplement = 'default'
+        self.params.datasetNameComplement = 'unbalanced'
         
         self.params.nClasses = 10
         self.params.imgChannels = 3
@@ -13,6 +13,6 @@ class TEST(Dataset):
         self.params.imgHeight = 48
 
         self.transformFunction = lambda entry: resizeImg(48, 0, entry)
-        self.filterFunction = None
+        self.filterFunction = lambda img, data: unbalance(img, data, 0.1, self.params.nClasses)
 
         self.slices = ['train']

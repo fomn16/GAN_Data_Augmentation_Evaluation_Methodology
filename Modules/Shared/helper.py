@@ -116,7 +116,7 @@ def LoadDataset(name, with_info,as_supervised,data_dir,nameComplement,sliceNames
             nEntries += info.splits[slice].num_examples
 
     maxStorageGigs = 5
-    maxStorage = 133415085*maxStorageGigs
+    maxStorage = 125000000*maxStorageGigs
 
     retData = None
 
@@ -144,13 +144,14 @@ def LoadDataset(name, with_info,as_supervised,data_dir,nameComplement,sliceNames
                 includedEntries += nEntryArray[targetSlice]
                 entries.extend(list(alteredSlices[targetSlice]))
             else:
-                includedEntries = maxStorageImgs
                 toInclude = maxStorageImgs - includedEntries
+                includedEntries = maxStorageImgs
                 entries.extend(list(itertools.islice(alteredSlices[targetSlice], toInclude)))
 
         imgs = np.array([i[0] for i in entries])
         lbls = np.array([i[1] for i in entries])
 
+        del entries, alteredSlices, loadedSlices, dataset, info
         if(filterFunction != None):
             imgs, lbls = filterFunction(imgs, lbls)
             

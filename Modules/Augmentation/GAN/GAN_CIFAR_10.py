@@ -21,7 +21,7 @@ class GAN_CIFAR_10(GAN):
         self.batchNormMomentum = 0.8
         self.batchNormEpsilon = 2e-4
 
-        self.ganEpochs = 25
+        self.ganEpochs = 50
         self.batchSize = 128
 
         self.generator = None
@@ -35,7 +35,7 @@ class GAN_CIFAR_10(GAN):
         return model
     
     def discDownscale(self, model):
-        model = self.ResidualBlock(model, 1, 64)
-        model = self.ResidualBlock(model, 1, 64)
-        model = self.ResidualBlock(model, 1, 64)
+        model = self.ResidualBlock(model, 1, 64, stride=2)
+        model = self.ResidualBlock(model, 1, 64, stride=2)
+        model = self.ResidualBlock(model, 1, 64, stride=2)
         return model

@@ -20,7 +20,7 @@ class CGAN_EUROSAT(CGAN):
         self.batchNormEpsilon = 2e-4
         self.l2RegParam = 0.01
 
-        self.ganEpochs = 25
+        self.ganEpochs = 50
         self.batchSize = 128
         self.extraDiscEpochs = 1
         self.generator = None
@@ -34,7 +34,7 @@ class CGAN_EUROSAT(CGAN):
         return model
     
     def discDownscale(self, model):
-        model = self.ResidualBlock(model, 1, 64)
-        model = self.ResidualBlock(model, 1, 64)
-        model = self.ResidualBlock(model, 1, 64)
+        model = self.ResidualBlock(model, 1, 64, stride=2)
+        model = self.ResidualBlock(model, 1, 64, stride=2)
+        model = self.ResidualBlock(model, 1, 64, stride=2)
         return model

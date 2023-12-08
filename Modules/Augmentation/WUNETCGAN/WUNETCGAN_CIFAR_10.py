@@ -29,7 +29,7 @@ class WUNETCGAN_CIFAR_10(WUNETCGAN):
         self.gan = None 
 
         self.wrongClassAmmt = 0.5
-        self.similarityLossAmmount = 1/5
+        self.similarityLossAmmount = 1/2 if "unbalanced" in self.params.datasetNameComplement else 1/5
         self.similarityLossDecaySteps = 1/10
         self.similarityLossDecayRate = 0.93
 

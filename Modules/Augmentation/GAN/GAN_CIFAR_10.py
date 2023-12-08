@@ -22,20 +22,20 @@ class GAN_CIFAR_10(GAN):
         self.batchNormEpsilon = 2e-4
 
         self.ganEpochs = 25
-        self.batchSize = 64
+        self.batchSize = 128
 
         self.generator = None
         self.discriminator = None
         self.gan = None
     
     def genUpscale(self, model):
-        model = self.TransposedBlock(model, 1, 128, kernelRegularizer=regularizers.l2(self.l2RegParam))
-        model = self.TransposedBlock(model, 1, 128, kernelRegularizer=regularizers.l2(self.l2RegParam))
-        model = self.TransposedBlock(model, 1, 128, kernelRegularizer=regularizers.l2(self.l2RegParam))
+        model = self.TransposedBlock(model, 2, 64)
+        model = self.TransposedBlock(model, 2, 64)
+        model = self.TransposedBlock(model, 1, 64)
         return model
     
     def discDownscale(self, model):
-        model = self.Block(model, 1, 64, kernelRegularizer=regularizers.l2(self.l2RegParam))
-        model = self.Block(model, 1, 128, kernelRegularizer=regularizers.l2(self.l2RegParam))
-        model = self.Block(model, 1, 256, kernelRegularizer=regularizers.l2(self.l2RegParam))
+        model = self.ResidualBlock(model, 1, 64)
+        model = self.ResidualBlock(model, 1, 64)
+        model = self.ResidualBlock(model, 1, 64)
         return model

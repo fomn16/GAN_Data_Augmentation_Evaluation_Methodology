@@ -4,7 +4,7 @@ from Modules.Shared.Params import Params
 from Modules.Shared.helper import *
 from Modules.Augmentation.WUNETCGAN.WUNETCGAN import WUNETCGAN
 
-class WUNETCGAN_CIFAR_10(WUNETCGAN):
+class WUNETCGAN_PLANT(WUNETCGAN):
     def loadConstants(self):
         self.genWidth = 4
         self.genHeight = 4
@@ -29,7 +29,7 @@ class WUNETCGAN_CIFAR_10(WUNETCGAN):
         self.gan = None 
 
         self.wrongClassAmmt = 0.5
-        self.similarityLossAmmount = 1/2
+        self.similarityLossAmmount = 1/5
         self.similarityLossDecaySteps = 1/10
         self.similarityLossDecayRate = 0.93
 

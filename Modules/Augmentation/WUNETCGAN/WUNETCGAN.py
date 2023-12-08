@@ -32,6 +32,9 @@ class WUNETCGAN(GANFramework):
         self.gan = None
 
         self.wrongClassAmmt = 0.25
+        self.similarityLossAmmount = 1/2
+        self.similarityLossDecaySteps = 1/10
+        self.similarityLossDecayRate = 0.93
         
         raise ValueError("WUNETCGAN.loadConstants must be overriten") 
     
@@ -144,10 +147,10 @@ class WUNETCGAN(GANFramework):
         
         )
         lr_schedule_gen = ExponentialDecay(
-            self.initLr/2, 
+            self.initLr*self.similarityLossAmmount, 
             staircase = False,
-            decay_steps=self.ganEpochs*nBatches/10,
-            decay_rate=0.93
+            decay_steps=self.ganEpochs*nBatches*self.similarityLossDecaySteps,
+            decay_rate=self.similarityLossDecayRate
         
         )
         self.optDiscr = Adam(learning_rate=lr_schedule_disc, beta_1 = 0.5, beta_2=0.9)

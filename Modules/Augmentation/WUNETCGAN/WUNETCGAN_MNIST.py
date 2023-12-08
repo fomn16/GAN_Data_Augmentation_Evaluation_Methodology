@@ -29,6 +29,9 @@ class WUNETCGAN_MNIST(WUNETCGAN):
         self.gan = None
         
         self.wrongClassAmmt = 0.5
+        self.similarityLossAmmount = 1/2
+        self.similarityLossDecaySteps = 1/10
+        self.similarityLossDecayRate = 0.93
 
     def UNetCall(self, model):
         return self.UNet(model, 32, 1.25, 2, dropout=False)

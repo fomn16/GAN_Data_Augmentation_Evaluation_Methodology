@@ -21,7 +21,7 @@ class CGAN_CIFAR_10(CGAN):
         self.l2RegParam = 0.01
 
         self.ganEpochs = 25
-        self.batchSize = 32
+        self.batchSize = 128
         self.extraDiscEpochs = 1
         self.generator = None
         self.discriminator = None
@@ -34,7 +34,7 @@ class CGAN_CIFAR_10(CGAN):
         return model
     
     def discDownscale(self, model):
-        model = self.Block(model, 1, 64)
-        model = self.Block(model, 1, 64)
-        model = self.Block(model, 1, 64)
+        model = self.ResidualBlock(model, 1, 64)
+        model = self.ResidualBlock(model, 1, 64)
+        model = self.ResidualBlock(model, 1, 64)
         return model

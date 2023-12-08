@@ -26,13 +26,15 @@ class WUNETCGAN_QUICKDRAW(WUNETCGAN):
         self.extraDiscEpochs = 5
         self.generator = None
         self.discriminator = None
-        self.gan = None 
+        self.gan = None
 
-        self.uNetChannels = 32
-        self.uNetRatio = 2
-        self.uNetBlocks = 2
-        self.uNetDropout = False
-        self.uNetBatchNorm = True
+        self.wrongClassAmmt = 0.5
+        self.similarityLossAmmount = 1/2
+        self.similarityLossDecaySteps = 1/10
+        self.similarityLossDecayRate = 0.93
+
+    def UNetCall(self, model):
+        return self.UNet(model, 32, 2, 2, dropout=False)
     
     def genUpscale(self, model):
         model = self.TransposedBlock(model, 1, 16)

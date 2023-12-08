@@ -5,6 +5,8 @@ from Modules.Datasets.Implementations.MNIST import MNIST
 from Modules.Datasets.Implementations.MNIST_UNBALANCED import MNIST_UNBALANCED
 from Modules.Datasets.Implementations.CIFAR_10 import CIFAR_10
 from Modules.Datasets.Implementations.CIFAR_10_UNBALANCED import CIFAR_10_UNBALANCED
+from Modules.Datasets.Implementations.PLANT import PLANT
+from Modules.Datasets.Implementations.PLANT_UNBALANCED import PLANT_UNBALANCED
 from Modules.Datasets.Implementations.TEST import TEST
 from Modules.Datasets.Implementations.QUICKDRAW import QUICKDRAW
 from Modules.Datasets.Implementations.FLOWERS import FLOWERS
@@ -54,9 +56,11 @@ datasets.append(MNIST(params))
 datasets.append(MNIST_UNBALANCED(params))
 datasets.append(CIFAR_10(params))
 datasets.append(CIFAR_10_UNBALANCED(params))
-#datasets.append(QUICKDRAW(params))
+datasets.append(PLANT(params))
+datasets.append(PLANT_UNBALANCED(params))
 #datasets.append(FLOWERS(params))
 #datasets.append(IMAGENET(params))
+#datasets.append(QUICKDRAW(params))
 #datasets.append(TEST(params))
 
 for fold in range(params.currentFold, params.kFold):
@@ -74,10 +78,10 @@ for fold in range(params.currentFold, params.kFold):
             id = len(augList) - 1
             for i in range (10,100,10):
                 n=i/100
-                augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [n,1-n]], str(i)+'_'+str(100-i)))
-                augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [1,n]], '100_'+str(i)))
-                augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [n,1]], str(i)+'_100'))
-                augmentators.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [1,1]], '100_100'))
+                augList.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [n,1-n]], str(i)+'_'+str(100-i)))
+                augList.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [1,n]], '100_'+str(i)))
+                augList.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [n,1]], str(i)+'_100'))
+                augList.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [1,1]], '100_100'))
 
         augmentators : List[Augmentator] = []
         augmentators.extend(getAugmentators(Augmentators.DIRECT, params))

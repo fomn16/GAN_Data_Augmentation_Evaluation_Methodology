@@ -25,7 +25,7 @@ class GAN(GANFramework):
         self.batchNormMomentum = 0.8
         self.batchNormEpsilon = 2e-4
 
-        self.ganEpochs = 100
+        self.ganEpochs = 75
         self.batchSize = 64
 
         self.generator = None

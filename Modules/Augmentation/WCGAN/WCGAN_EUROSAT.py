@@ -21,7 +21,7 @@ class WCGAN_EUROSAT(WCGAN):
 
         self.clipValue = 0.01
 
-        self.ganEpochs = 100
+        self.ganEpochs = 75
         self.batchSize = 128
         self.extraDiscEpochs = 5
         self.generator = None

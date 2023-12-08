@@ -24,7 +24,7 @@ class WUNETCGAN(GANFramework):
 
         self.clipValue = 0.01
 
-        self.ganEpochs = 100
+        self.ganEpochs = 75
         self.batchSize = 64
         self.extraDiscEpochs = 2
         self.generator = None

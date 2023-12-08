@@ -54,15 +54,15 @@ else:
 
 datasets : List[Dataset] = []
 
-
-#datasets.append(MNIST(params))
-#datasets.append(MNIST_UNBALANCED(params))
-#datasets.append(CIFAR_10(params))
-#datasets.append(CIFAR_10_UNBALANCED(params))
-#datasets.append(PLANT(params))
-#datasets.append(PLANT_UNBALANCED(params))
+datasets.append(MNIST(params))
+datasets.append(MNIST_UNBALANCED(params))
+datasets.append(CIFAR_10(params))
+datasets.append(CIFAR_10_UNBALANCED(params))
+datasets.append(PLANT(params))
+datasets.append(PLANT_UNBALANCED(params))
 datasets.append(EUROSAT(params))
 datasets.append(EUROSAT_UNBALANCED(params))
+
 #datasets.append(FLOWERS(params))
 #datasets.append(IMAGENET(params))
 #datasets.append(QUICKDRAW(params))

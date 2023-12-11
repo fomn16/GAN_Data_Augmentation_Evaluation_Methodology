@@ -1,3 +1,6 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
+
 from Modules.Shared.helper import *
 from Modules.Shared.config import *
 
@@ -21,8 +24,6 @@ from Modules.Datasets.Dataset import Dataset
 from Modules.Augmentation.Augmentator import Augmentator
 from Modules.Benchmark.Benchmark import Benchmark
 
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
 #cria objeto de parametros
 params = Params()

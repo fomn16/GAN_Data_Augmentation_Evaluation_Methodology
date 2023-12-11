@@ -1,3 +1,13 @@
+
+'''
+SETUP:
+
+sudo apt install gcc
+sudo apt install g++
+sydi apt-get update && sudo apt-get install ffmpeg libsm6 libxext6  -y
+pip install tensorflow tensorflow-addons scikit-learn pandas ipython pillow matplotlib tensorflow_datasets imgaug seaborn pydot annoy trimap
+'''
+
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 

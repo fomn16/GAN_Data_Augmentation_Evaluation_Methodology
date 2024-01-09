@@ -239,7 +239,11 @@ class CGAN(GANFramework):
         labels = np.floor(np.array(range(5*self.nClasses))/5)
         images = self.generator.predict([noise, labels])
         out = ((images * 127.5) + 127.5).astype('uint8')
-        showOutputAsImg(out, self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a) for a in labels]) + '.png',self.nClasses*5, colored=(self.imgChannels>1))
+        if(self.nClasses <= 10):
+            filepath = self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a) for a in labels]) + '.png'
+        else:
+            filepath = self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a) for a in labels[:50]]) + '.png'
+        showOutputAsImg(out, filepath, self.nClasses*5, colored=(self.imgChannels>1))
 
     def generate(self, srcImgs, srcLbls):
         nEntries = srcLbls.shape[0]

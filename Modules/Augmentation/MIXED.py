@@ -16,13 +16,23 @@ class MIXED(Augmentator):
             self.percentages = extraParams[2]
         else:
             self.percentages = [1] * len(ids)
-
-        self.name = self.__class__.__name__ + addToName(nameComplement) + '_'.join([arr[id].name for id in ids])
+            
+        self.nameComplement = nameComplement
+        self.runtime = params.runtime
 
         self.currentFold = params.currentFold
-        self.basePath = verifiedFolder('runtime_' + params.runtime + '/trainingStats/' + self.name)
         self.arr = arr
         self.ids = ids
+
+    def compile(self):
+        for i in range(len(self.arr)):
+            print(self.arr[i].name, self.arr[i].__class__.__name__, i)
+        self.ids[0] = len(self.arr) - 1 - self.ids[0]
+        self.ids[1] = len(self.arr) - 2 - self.ids[1]
+
+        print(self.ids)
+        self.name = self.__class__.__name__ + addToName(self.nameComplement) + '_'.join([self.arr[id].name for id in self.ids])
+        self.basePath = verifiedFolder('runtime_' + self.runtime + '/trainingStats/' + self.name)
 
     def generate(self, srcImgs, srcLbls):
         imgs = []

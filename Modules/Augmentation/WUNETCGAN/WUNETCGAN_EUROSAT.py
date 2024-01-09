@@ -28,8 +28,8 @@ class WUNETCGAN_EUROSAT(WUNETCGAN):
         self.discriminator = None
         self.gan = None 
         self.wrongClassAmmt = 0.5
-        self.similarityLossAmmount = 1/2 if "unbalanced" in self.params.datasetNameComplement else 1/5
-        self.similarityLossDecaySteps = 1/10
+        self.similarityLossAmmount = 1/2 if "unbalanced" in self.params.datasetNameComplement else 1/3
+        self.similarityLossDecaySteps = 1
         self.similarityLossDecayRate = 0.93
     def UNetCall(self, model):
         return self.UNet(model, 32, 1.5, 3, dropout=False)

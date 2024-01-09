@@ -218,7 +218,11 @@ class GAN(GANFramework):
         noise = np.random.uniform(-1,1, size=(nEntries,self.noiseDim))
         images, labels = self.generator.predict(noise)
         out = ((images * 127.5) + 127.5).astype('uint8')
-        showOutputAsImg(out, self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a.argmax()) for a in labels]) + '.png',nEntries, colored=(self.imgChannels>1))
+        if(self.nClasses <= 10):
+            filepath = self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a.argmax()) for a in labels]) + '.png'
+        else:
+            filepath = self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a.argmax()) for a in labels[:50]]) + '.png'
+        showOutputAsImg(out, filepath, nEntries, colored=(self.imgChannels>1))
 
     def generate(self, srcImgs, srcLbls):
         nEntries = srcLbls.shape[0]

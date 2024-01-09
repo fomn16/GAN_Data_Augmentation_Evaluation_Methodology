@@ -1,3 +1,6 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
+
 from Modules.Shared.helper import *
 from Modules.Shared.config import *
 
@@ -20,9 +23,6 @@ from Modules.Shared.Saving import *
 from Modules.Datasets.Dataset import Dataset
 from Modules.Augmentation.Augmentator import Augmentator
 from Modules.Benchmark.Benchmark import Benchmark
-
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
 #cria objeto de parametros
 params = Params()
@@ -63,10 +63,6 @@ datasets.append(PLANT_UNBALANCED(params))
 datasets.append(EUROSAT(params))
 datasets.append(EUROSAT_UNBALANCED(params))
 
-#datasets.append(FLOWERS(params))
-#datasets.append(IMAGENET(params))
-#datasets.append(QUICKDRAW(params))
-
 for fold in range(params.currentFold, params.kFold):
     params.currentFold = fold
     saveParam('params_currentFold', params.currentFold)
@@ -82,10 +78,10 @@ for fold in range(params.currentFold, params.kFold):
             id = len(augList) - 1
             for i in range (10,100,10):
                 n=i/100
-                augList.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [n,1-n]], str(i)+'_'+str(100-i)))
-                augList.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [1,n]], '100_'+str(i)))
-                augList.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [n,1]], str(i)+'_100'))
-            augList.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, {0,id}, [1,1]], '100_100'))
+                augList.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, [0,id], [n,1-n]], str(i)+'_'+str(100-i)))
+                augList.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, [0,id], [1,n]], '100_'+str(i)))
+                augList.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, [0,id], [n,1]], str(i)+'_100'))
+            augList.extend(getAugmentators(Augmentators.MIXED, params, [augmentators, [0,id], [1,1]], '100_100'))
 
         augmentators : List[Augmentator] = []
         augmentators.extend(getAugmentators(Augmentators.DIRECT, params))
@@ -93,7 +89,7 @@ for fold in range(params.currentFold, params.kFold):
         addWithMixTests(augmentators, Augmentators.CGAN, params)
         addWithMixTests(augmentators, Augmentators.WCGAN, params)
         addWithMixTests(augmentators, Augmentators.WUNETCGAN, params)
-        
+
         loadedAugmentatorId = loadParam('current_augmentator_id', 0)
         for augmentator in augmentators[loadedAugmentatorId:]:
             saveParam('current_augmentator_id', loadedAugmentatorId)

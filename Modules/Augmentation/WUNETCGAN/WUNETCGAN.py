@@ -307,8 +307,12 @@ class WUNETCGAN(GANFramework):
         for outId in range(10):
             newOut[outId*2] = imagesDs[outId]
             newOut[outId*2+1] = out[outId]
+        if(self.nClasses <= 10):
+            filepath = self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a) for a in self.testLbls]) + '.png'
+        else:
+            filepath = self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a) for a in self.testLbls[:50]]) + '.png'
 
-        showOutputAsImg(newOut, self.basePath + '/finalOutput_f' + str(self.currentFold) + '_' + '_'.join([str(a) for a in self.testLbls]) + '.png', colored=(self.imgChannels>1))
+        showOutputAsImg(newOut, filepath, colored=(self.imgChannels>1))
 
     def generate(self, srcImgs, srcLbls):
         nEntries = srcLbls.shape[0]

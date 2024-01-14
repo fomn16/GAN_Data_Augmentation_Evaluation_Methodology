@@ -60,5 +60,35 @@ class Dataset:
         self.trainLbls = np.concatenate((lbls[:testStart],lbls[testEnd:]))
         self.params.datasetTrainInstances = self.trainInstances
 
+        #salvando estatísticas do dataset
+        print(self.name + '\n')
+        print('train: ' + str(self.trainInstances)+ '\n')
+        print('test: ' + str(self.testInstances)+ '\n')
+        print('total: ' + str(self.totalInstances)+ '\n')
+        tst = [0]*self.params.nClasses
+        for c in self.trainLbls:
+            tst[c]+=1
+        for c in self.testLbls:
+            tst[c]+=1
+        print('\n\n')
+
+        if('unbalanced' not in self.name):
+            plt.bar(range(self.params.nClasses), tst, label='original')
+            plt.xlabel('Id da Classe')
+            plt.ylabel('Número de Instâncias')
+            plt.title(self.name.replace('_default', '').replace('_unbalanced', ' desbalanceado').replace('cifar10', 'CIFAR-10') + ' Instâncias x Classe')
+        else:
+            plt.bar(range(self.params.nClasses), tst, label='desbalanceado')
+
+        if(self.params.nClasses>20):
+            plt.xticks(range(self.params.nClasses),fontsize=6)
+        else:
+            plt.xticks(range(self.params.nClasses))
+
+        if('unbalanced' in self.name):
+            plt.legend(loc='upper left')
+            plt.savefig(verifiedFolder('runtime_' + self.params.runtime + '/' + self.name + '_classGraph.png'))
+            plt.clf()
+
     def unload(self):
         del self.testImgs, self.testLbls, self.trainImgs, self.trainLbls

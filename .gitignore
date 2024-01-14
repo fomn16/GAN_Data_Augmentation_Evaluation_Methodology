@@ -134,3 +134,6 @@ dmypy.json
 savefile.json
 tmp04jnluottfds/*
 __autograph_generated_*
+Results/*
+ResultCompilers/*/*.txt
+ResultCompilers/*/output
